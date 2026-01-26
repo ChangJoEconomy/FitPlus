@@ -1,0 +1,38 @@
+<div class="auth-shell">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="logo">FitPlus</div>
+      <p class="muted">계정에 로그인하고 AI 홈 트레이닝을 시작하세요.</p>
+    </div>
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="form-error"><%= error %></div>
+    <% } %>
+    <% if (typeof message !== 'undefined' && message) { %>
+      <div class="form-success"><%= message %></div>
+    <% } %>
+    <form class="auth-form" method="post" action="/login">
+      <input type="hidden" name="returnTo" value="<%= typeof returnTo !== 'undefined' ? returnTo : '' %>" />
+      <div class="input-group">
+        <label for="login_id">아이디</label>
+        <input 
+          id="login_id" 
+          name="login_id" 
+          type="text" 
+          placeholder="아이디를 입력하세요" 
+          value="<%= typeof formData !== 'undefined' && formData.login_id ? formData.login_id : '' %>"
+          required 
+        />
+      </div>
+      <div class="input-group">
+        <label for="password">비밀번호</label>
+        <input id="password" name="password" type="password" placeholder="비밀번호" required />
+      </div>
+      <div class="helper-row">
+        <div class="muted">아직 계정이 없나요?</div>
+        <a href="/signup">회원가입</a>
+      </div>
+      <button class="primary full" type="submit">로그인</button>
+    </form>
+    <a class="ghost link-button" href="/">홈으로 돌아가기</a>
+  </div>
+</div>

@@ -1,0 +1,125 @@
+<div class="admin-header">
+    <h1>채점 지표 관리</h1>
+    <button class="btn btn-primary" onclick="document.getElementById('addModal').style.display='flex'">
+        + 지표 추가
+    </button>
+</div>
+
+<div class="admin-card">
+    <% if (metrics.length === 0) { %>
+        <div class="empty-state">
+            <div class="empty-state-icon">📊</div>
+            <div class="empty-state-title">등록된 지표가 없습니다</div>
+            <p>채점에 사용할 지표를 추가해보세요.</p>
+        </div>
+    <% } else { %>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>키</th>
+                    <th>이름</th>
+                    <th>단위</th>
+                    <th>설명</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% metrics.forEach(metric => { %>
+                    <tr>
+                        <td><code><%= metric.key %></code></td>
+                        <td><strong><%= metric.title %></strong></td>
+                        <td><span class="badge badge-info"><%= metric.unit %></span></td>
+                        <td><%= metric.description || '-' %></td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="btn btn-sm btn-secondary" onclick="openEditModal('<%= metric.metric_id %>', '<%= metric.key %>', '<%= metric.title %>', '<%= metric.unit %>', '<%= metric.description || '' %>')">
+                                    수정
+                                </button>
+                                <form action="/admin/metrics/<%= metric.metric_id %>/delete" method="POST" style="display:inline;" onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                                    <button type="submit" class="btn btn-sm btn-danger">삭제</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    <% } %>
+</div>
+
+<!-- 추가 모달 -->
+<div id="addModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">지표 추가</h3>
+            <button class="modal-close" onclick="document.getElementById('addModal').style.display='none'">&times;</button>
+        </div>
+        <form action="/admin/metrics" method="POST">
+            <div class="form-group">
+                <label class="form-label">키 *</label>
+                <input type="text" name="key" class="form-input" placeholder="accuracy" required />
+                <div class="form-hint">영문 소문자, 밑줄 (예: accuracy, speed, form_score)</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">이름 *</label>
+                <input type="text" name="title" class="form-input" placeholder="정확도" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">단위 *</label>
+                <input type="text" name="unit" class="form-input" placeholder="%" required />
+                <div class="form-hint">예: %, 점, 초, 회</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">설명</label>
+                <textarea name="description" class="form-textarea" placeholder="지표에 대한 설명..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('addModal').style.display='none'">취소</button>
+                <button type="submit" class="btn btn-primary">추가</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 수정 모달 -->
+<div id="editModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">지표 수정</h3>
+            <button class="modal-close" onclick="document.getElementById('editModal').style.display='none'">&times;</button>
+        </div>
+        <form id="editForm" method="POST">
+            <div class="form-group">
+                <label class="form-label">키 *</label>
+                <input type="text" name="key" id="edit_key" class="form-input" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">이름 *</label>
+                <input type="text" name="title" id="edit_title" class="form-input" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">단위 *</label>
+                <input type="text" name="unit" id="edit_unit" class="form-input" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">설명</label>
+                <textarea name="description" id="edit_description" class="form-textarea"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('editModal').style.display='none'">취소</button>
+                <button type="submit" class="btn btn-primary">저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditModal(id, key, title, unit, description) {
+    document.getElementById('editForm').action = '/admin/metrics/' + id;
+    document.getElementById('edit_key').value = key;
+    document.getElementById('edit_title').value = title;
+    document.getElementById('edit_unit').value = unit;
+    document.getElementById('edit_description').value = description;
+    document.getElementById('editModal').style.display = 'flex';
+}
+</script>

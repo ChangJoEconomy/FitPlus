@@ -1,0 +1,124 @@
+<div class="admin-header">
+    <h1>사용자 관리</h1>
+</div>
+
+<!-- 통계 카드 -->
+<div class="stats-grid" style="margin-bottom: 24px;">
+    <div class="stat-card">
+        <div class="stat-value"><%= stats.total %></div>
+        <div class="stat-label">전체 사용자</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" style="color: #16a34a;"><%= stats.active %></div>
+        <div class="stat-label">활성 사용자</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" style="color: #d97706;"><%= stats.blocked %></div>
+        <div class="stat-label">차단된 사용자</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" style="color: #dc2626;"><%= stats.deleted %></div>
+        <div class="stat-label">삭제된 사용자</div>
+    </div>
+</div>
+
+<!-- 필터 -->
+<div class="admin-card" style="margin-bottom: 24px;">
+    <form action="/admin/users" method="GET" style="display: flex; gap: 16px; align-items: end; flex-wrap: wrap;">
+        <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
+            <label class="form-label">검색</label>
+            <input type="text" name="search" class="form-input" placeholder="아이디 또는 닉네임" value="<%= filters.search %>" />
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <label class="form-label">상태</label>
+            <select name="status" class="form-select" style="min-width: 120px;">
+                <option value="all" <%= filters.status === 'all' ? 'selected' : '' %>>전체</option>
+                <option value="active" <%= filters.status === 'active' ? 'selected' : '' %>>활성</option>
+                <option value="blocked" <%= filters.status === 'blocked' ? 'selected' : '' %>>차단</option>
+                <option value="deleted" <%= filters.status === 'deleted' ? 'selected' : '' %>>삭제</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">검색</button>
+        <a href="/admin/users" class="btn btn-secondary">초기화</a>
+    </form>
+</div>
+
+<!-- 사용자 목록 -->
+<div class="admin-card">
+    <% if (users.length === 0) { %>
+        <div class="empty-state">
+            <div class="empty-state-icon">👥</div>
+            <div class="empty-state-title">사용자가 없습니다</div>
+            <p>검색 조건에 맞는 사용자가 없습니다.</p>
+        </div>
+    <% } else { %>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>아이디</th>
+                    <th>닉네임</th>
+                    <th>상태</th>
+                    <th>가입일</th>
+                    <th>마지막 로그인</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% users.forEach(user => { %>
+                    <tr>
+                        <td>
+                            <strong><%= user.login_id %></strong>
+                            <% if (user.login_id === 'admin') { %>
+                                <span class="badge badge-info" style="margin-left: 6px;">관리자</span>
+                            <% } %>
+                        </td>
+                        <td><%= user.nickname %></td>
+                        <td>
+                            <% if (user.status === 'active') { %>
+                                <span class="badge badge-success">활성</span>
+                            <% } else if (user.status === 'blocked') { %>
+                                <span class="badge badge-warning">차단</span>
+                            <% } else { %>
+                                <span class="badge badge-danger">삭제</span>
+                            <% } %>
+                        </td>
+                        <td><%= new Date(user.created_at).toLocaleDateString('ko-KR') %></td>
+                        <td>
+                            <% if (user.last_login_at) { %>
+                                <%= new Date(user.last_login_at).toLocaleString('ko-KR') %>
+                            <% } else { %>
+                                <span style="color: #94a3b8;">-</span>
+                            <% } %>
+                        </td>
+                        <td>
+                            <% if (user.login_id !== 'admin') { %>
+                                <div class="action-btns">
+                                    <% if (user.status !== 'active') { %>
+                                        <form action="/admin/users/<%= user.user_id %>/status" method="POST" style="display:inline;">
+                                            <input type="hidden" name="status" value="active" />
+                                            <button type="submit" class="btn btn-sm btn-secondary" title="활성화">활성화</button>
+                                        </form>
+                                    <% } %>
+                                    <% if (user.status !== 'blocked') { %>
+                                        <form action="/admin/users/<%= user.user_id %>/status" method="POST" style="display:inline;" onsubmit="return confirm('이 사용자를 차단하시겠습니까?');">
+                                            <input type="hidden" name="status" value="blocked" />
+                                            <button type="submit" class="btn btn-sm btn-secondary" style="color: #d97706;" title="차단">차단</button>
+                                        </form>
+                                    <% } %>
+                                    <% if (user.status !== 'deleted') { %>
+                                        <form action="/admin/users/<%= user.user_id %>/status" method="POST" style="display:inline;" onsubmit="return confirm('이 사용자를 삭제 처리하시겠습니까?');">
+                                            <input type="hidden" name="status" value="deleted" />
+                                            <button type="submit" class="btn btn-sm btn-danger" title="삭제">삭제</button>
+                                        </form>
+                                    <% } %>
+                                </div>
+                            <% } else { %>
+                                <span style="color: #94a3b8; font-size: 13px;">변경 불가</span>
+                            <% } %>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    <% } %>
+</div>

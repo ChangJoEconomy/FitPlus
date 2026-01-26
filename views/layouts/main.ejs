@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= title || "FitPlus" %></title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <% const isLoggedIn = typeof isAuthenticated !== 'undefined' && isAuthenticated; %>
+    <% const userData = isLoggedIn && typeof user !== 'undefined' ? user : null; %>
+    <% const displayName = (userData && userData.nickname) || "게스트"; %>
+    <% const currentTab = (typeof locals !== 'undefined' && typeof locals.activeTab !== 'undefined')
+      ? locals.activeTab
+      : (typeof activeTab !== 'undefined' ? activeTab : ''); %>
+    <% const tabClass = (name) => `tab${currentTab === name ? ' active' : ''}`; %>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="logo">FitPlus</div>
+          <div class="tag">AI 홈 트레이닝</div>
+        </div>
+        <nav class="tabs" aria-label="주요 탭">
+          <a class="<%= tabClass('home') %>" href="/">Home</a>
+        </nav>
+        <div class="profile-area">
+          <span class="avatar"><%= displayName.slice(0, 1).toUpperCase() %></span>
+          <span class="name"><%= displayName %></span>
+          <% if (isLoggedIn) { %>
+            <a class="auth-btn logout-btn" href="/logout">로그아웃</a>
+          <% } else { %>
+            <a class="auth-btn login-btn" href="/login">로그인</a>
+          <% } %>
+        </div>
+      </header>
+
+      <main class="content">
+        <%- body %>
+      </main>
+    </div>
+  </body>
+</html>

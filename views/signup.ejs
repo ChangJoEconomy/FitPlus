@@ -1,0 +1,153 @@
+<div class="auth-shell">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="logo">FitPlus</div>
+      <p class="muted">간단한 정보를 입력하고 AI 홈 트레이닝을 시작해보세요</p>
+    </div>
+    <% if (typeof errors !== 'undefined' && errors.general) { %>
+      <div class="form-error"><%= errors.general %></div>
+    <% } %>
+    <form class="auth-form" method="post" action="/signup" id="signupForm">
+      <div class="input-group">
+        <label for="signup-login_id">아이디</label>
+        <div class="inline-input-row">
+          <input 
+            id="signup-login_id" 
+            name="login_id" 
+            type="text" 
+            placeholder="로그인 아이디 (영문, 숫자, 밑줄)" 
+            value="<%= typeof formData !== 'undefined' && formData.login_id ? formData.login_id : '' %>"
+            required 
+          />
+          <button class="ghost check-button" type="button" id="checkIdBtn">중복체크</button>
+        </div>
+        <div class="field-message" id="login_id-msg">
+          <% if (typeof errors !== 'undefined' && errors.login_id) { %>
+            <span class="error"><%= errors.login_id %></span>
+          <% } %>
+        </div>
+      </div>
+      <div class="input-group">
+        <label for="signup-nickname">닉네임</label>
+        <input 
+          id="signup-nickname" 
+          name="nickname" 
+          type="text" 
+          placeholder="홍길동" 
+          value="<%= typeof formData !== 'undefined' && formData.nickname ? formData.nickname : '' %>"
+          required 
+        />
+        <div class="field-message" id="nickname-msg">
+          <% if (typeof errors !== 'undefined' && errors.nickname) { %>
+            <span class="error"><%= errors.nickname %></span>
+          <% } %>
+        </div>
+      </div>
+      <div class="input-group">
+        <label for="signup-password">비밀번호</label>
+        <input id="signup-password" name="password" type="password" placeholder="8자 이상 입력" required />
+        <div class="field-message" id="password-msg">
+          <% if (typeof errors !== 'undefined' && errors.password) { %>
+            <span class="error"><%= errors.password %></span>
+          <% } %>
+        </div>
+      </div>
+      <div class="input-group">
+        <label for="confirm-password">비밀번호 확인</label>
+        <input id="confirm-password" name="confirmPassword" type="password" placeholder="다시 한 번 입력" required />
+        <div class="field-message" id="confirmPassword-msg">
+          <% if (typeof errors !== 'undefined' && errors.confirmPassword) { %>
+            <span class="error"><%= errors.confirmPassword %></span>
+          <% } %>
+        </div>
+      </div>
+      <div class="helper-row">
+        <div class="muted">이미 계정이 있나요?</div>
+        <a href="/login">로그인</a>
+      </div>
+      <button class="primary full" type="submit">회원가입</button>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const loginIdInput = document.getElementById('signup-login_id');
+  const checkIdBtn = document.getElementById('checkIdBtn');
+  const passwordInput = document.getElementById('signup-password');
+  const confirmPasswordInput = document.getElementById('confirm-password');
+
+  let idChecked = false;
+  let checkedId = '';
+
+  // 아이디 중복 체크
+  checkIdBtn.addEventListener('click', async function() {
+    const loginId = loginIdInput.value.trim();
+    const msgEl = document.getElementById('login_id-msg');
+
+    if (!loginId) {
+      msgEl.innerHTML = '<span class="error">아이디를 입력해주세요.</span>';
+      return;
+    }
+
+    try {
+      const res = await fetch('/signup/check-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login_id: loginId })
+      });
+      const data = await res.json();
+
+      if (data.valid) {
+        msgEl.innerHTML = '<span class="success">' + data.message + '</span>';
+        idChecked = true;
+        checkedId = loginId;
+      } else {
+        msgEl.innerHTML = '<span class="error">' + data.message + '</span>';
+        idChecked = false;
+      }
+    } catch (err) {
+      msgEl.innerHTML = '<span class="error">서버 오류가 발생했습니다.</span>';
+      idChecked = false;
+    }
+  });
+
+  // 아이디 변경 시 중복체크 리셋
+  loginIdInput.addEventListener('input', function() {
+    if (checkedId !== loginIdInput.value.trim()) {
+      idChecked = false;
+      document.getElementById('login_id-msg').innerHTML = '';
+    }
+  });
+
+  // 비밀번호 실시간 확인
+  confirmPasswordInput.addEventListener('input', function() {
+    const msgEl = document.getElementById('confirmPassword-msg');
+    if (passwordInput.value && confirmPasswordInput.value) {
+      if (passwordInput.value === confirmPasswordInput.value) {
+        msgEl.innerHTML = '<span class="success">비밀번호가 일치합니다.</span>';
+      } else {
+        msgEl.innerHTML = '<span class="error">비밀번호가 일치하지 않습니다.</span>';
+      }
+    } else {
+      msgEl.innerHTML = '';
+    }
+  });
+
+  // 비밀번호 길이 체크
+  passwordInput.addEventListener('input', function() {
+    const msgEl = document.getElementById('password-msg');
+    if (passwordInput.value.length > 0 && passwordInput.value.length < 8) {
+      msgEl.innerHTML = '<span class="error">비밀번호는 8자 이상이어야 합니다.</span>';
+    } else if (passwordInput.value.length >= 8) {
+      msgEl.innerHTML = '<span class="success">사용 가능한 비밀번호입니다.</span>';
+    } else {
+      msgEl.innerHTML = '';
+    }
+    // 비밀번호 확인도 재검사
+    if (confirmPasswordInput.value) {
+      confirmPasswordInput.dispatchEvent(new Event('input'));
+    }
+  });
+});
+</script>

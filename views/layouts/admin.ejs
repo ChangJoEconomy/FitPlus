@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= title || "FitPlus Admin" %></title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/admin.css" />
+  </head>
+  <body>
+    <% const userData = typeof user !== 'undefined' ? user : null; %>
+    <% const displayName = (userData && userData.nickname) || "Admin"; %>
+    <% const currentTab = (typeof locals !== 'undefined' && typeof locals.activeTab !== 'undefined')
+      ? locals.activeTab
+      : (typeof activeTab !== 'undefined' ? activeTab : ''); %>
+    <% const tabClass = (name) => `tab${currentTab === name ? ' active' : ''}`; %>
+    <div class="app admin-app">
+      <header class="topbar admin-topbar">
+        <div class="brand">
+          <div class="logo">FitPlus <span class="admin-badge">Admin</span></div>
+        </div>
+        <div class="profile-area">
+          <a class="auth-btn logout-btn" href="/logout">로그아웃</a>
+        </div>
+      </header>
+
+      <div class="admin-container">
+        <aside class="admin-sidebar">
+          <nav class="sidebar-nav">
+            <div class="sidebar-section">
+              <div class="sidebar-title">콘텐츠 관리</div>
+              <a class="sidebar-link <%= currentTab === 'exercises' ? 'active' : '' %>" href="/admin/exercises">
+                운동 관리
+              </a>
+              <a class="sidebar-link <%= currentTab === 'metrics' ? 'active' : '' %>" href="/admin/metrics">
+                채점 지표
+              </a>
+              <a class="sidebar-link <%= currentTab === 'scoring' ? 'active' : '' %>" href="/admin/scoring">
+                채점 프로파일
+              </a>
+            </div>
+            <div class="sidebar-section">
+              <div class="sidebar-title">시스템</div>
+              <a class="sidebar-link <%= currentTab === 'users' ? 'active' : '' %>" href="/admin/users">
+                사용자 관리
+              </a>
+            </div>
+          </nav>
+        </aside>
+
+        <main class="admin-content">
+          <% if (typeof success !== 'undefined' && success) { %>
+            <div class="alert alert-success"><%= success %></div>
+          <% } %>
+          <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-error"><%= error %></div>
+          <% } %>
+          <%- body %>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,208 @@
+<div class="admin-header">
+    <div>
+        <a href="/admin/scoring" style="color: #64748b; font-size: 14px;">← 프로파일 목록</a>
+        <h1 style="margin-top: 8px;"><%= profile.name %></h1>
+        <div style="color: #64748b; margin-top: 4px;">
+            <strong><%= profile.exercise?.name %></strong> (<%= profile.exercise?.code %>) · 
+            <span class="version-badge">v<%= profile.version %></span>
+            <% if (profile.is_active) { %>
+                <span class="badge badge-success" style="margin-left: 8px;">활성</span>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<!-- 프로파일 기본 정보 수정 -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2 class="admin-card-title">기본 정보</h2>
+    </div>
+    <form action="/admin/scoring/<%= profile.scoring_profile_id %>" method="POST">
+        <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 16px; align-items: end;">
+            <div class="form-group" style="margin: 0;">
+                <label class="form-label">프로파일 이름</label>
+                <input type="text" name="name" class="form-input" value="<%= profile.name %>" required />
+            </div>
+            <div class="form-group" style="margin: 0;">
+                <label class="toggle">
+                    <input type="checkbox" name="is_active" <%= profile.is_active ? 'checked' : '' %> />
+                    <span class="toggle-slider"></span>
+                </label>
+                <span style="margin-left: 8px;">활성화</span>
+            </div>
+            <button type="submit" class="btn btn-primary">저장</button>
+        </div>
+    </form>
+</div>
+
+<!-- 채점 지표 설정 -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2 class="admin-card-title">채점 지표 설정</h2>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('addMetricModal').style.display='flex'">
+            + 지표 추가
+        </button>
+    </div>
+    
+    <% if (profileMetrics.length === 0) { %>
+        <div class="empty-state">
+            <div class="empty-state-icon">📊</div>
+            <div class="empty-state-title">설정된 지표가 없습니다</div>
+            <p>이 프로파일에 채점 지표를 추가하세요.</p>
+        </div>
+    <% } else { %>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>순서</th>
+                    <th>지표</th>
+                    <th>가중치</th>
+                    <th>최대점수</th>
+                    <th>규칙</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% profileMetrics.forEach(pm => { %>
+                    <tr>
+                        <td><%= pm.order_no %></td>
+                        <td>
+                            <strong><%= pm.metric?.title %></strong>
+                            <br><code style="font-size: 11px; color: #64748b;"><%= pm.metric?.key %></code>
+                        </td>
+                        <td><%= (pm.weight * 100).toFixed(1) %>%</td>
+                        <td><%= pm.max_score %>점</td>
+                        <td>
+                            <% if (pm.rule) { %>
+                                <code style="font-size: 11px;"><%= JSON.stringify(pm.rule).substring(0, 30) %>...</code>
+                            <% } else { %>
+                                <span style="color: #94a3b8;">없음</span>
+                            <% } %>
+                        </td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="btn btn-sm btn-secondary" onclick='openEditMetricModal("<%= pm.metric_id %>", "<%= pm.metric?.title %>", "<%= pm.weight %>", "<%= pm.max_score %>", "<%= pm.order_no %>", <%= JSON.stringify(JSON.stringify(pm.rule || {})) %>)'>
+                                    수정
+                                </button>
+                                <form action="/admin/scoring/<%= profile.scoring_profile_id %>/metrics/<%= pm.metric_id %>/delete" method="POST" style="display:inline;" onsubmit="return confirm('이 지표를 제거하시겠습니까?');">
+                                    <button type="submit" class="btn btn-sm btn-danger">제거</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 16px; padding: 16px; background: #f8fafc; border-radius: 8px;">
+            <strong>총 가중치:</strong> 
+            <% const totalWeight = profileMetrics.reduce((sum, pm) => sum + parseFloat(pm.weight), 0); %>
+            <span class="<%= Math.abs(totalWeight - 1) < 0.01 ? 'badge badge-success' : 'badge badge-danger' %>">
+                <%= (totalWeight * 100).toFixed(1) %>%
+            </span>
+            <% if (Math.abs(totalWeight - 1) >= 0.01) { %>
+                <span style="color: #dc2626; margin-left: 8px;">⚠️ 가중치 합이 100%가 아닙니다</span>
+            <% } %>
+        </div>
+    <% } %>
+</div>
+
+<!-- 지표 추가 모달 -->
+<div id="addMetricModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">채점 지표 추가</h3>
+            <button class="modal-close" onclick="document.getElementById('addMetricModal').style.display='none'">&times;</button>
+        </div>
+        <form action="/admin/scoring/<%= profile.scoring_profile_id %>/metrics" method="POST">
+            <div class="form-group">
+                <label class="form-label">지표 선택 *</label>
+                <select name="metric_id" class="form-select" required>
+                    <option value="">지표를 선택하세요</option>
+                    <% allMetrics.forEach(metric => { %>
+                        <% const alreadyAdded = profileMetrics.some(pm => pm.metric_id === metric.metric_id); %>
+                        <option value="<%= metric.metric_id %>" <%= alreadyAdded ? 'disabled' : '' %>>
+                            <%= metric.title %> (<%= metric.key %>) - <%= metric.unit %>
+                            <%= alreadyAdded ? '(이미 추가됨)' : '' %>
+                        </option>
+                    <% }) %>
+                </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label class="form-label">가중치 *</label>
+                    <input type="number" name="weight" class="form-input" step="0.01" min="0" max="1" placeholder="0.25" required />
+                    <div class="form-hint">0~1 사이 (0.25 = 25%)</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">최대 점수 *</label>
+                    <input type="number" name="max_score" class="form-input" min="0" placeholder="100" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">순서 *</label>
+                    <input type="number" name="order_no" class="form-input" min="1" value="<%= profileMetrics.length + 1 %>" required />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">규칙 (JSON)</label>
+                <textarea name="rule" class="form-textarea" placeholder='{"threshold": 80, "penalty": 5}'></textarea>
+                <div class="form-hint">선택사항. 채점 규칙을 JSON 형식으로 입력하세요.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('addMetricModal').style.display='none'">취소</button>
+                <button type="submit" class="btn btn-primary">추가</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 지표 수정 모달 -->
+<div id="editMetricModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">채점 지표 수정</h3>
+            <button class="modal-close" onclick="document.getElementById('editMetricModal').style.display='none'">&times;</button>
+        </div>
+        <form action="/admin/scoring/<%= profile.scoring_profile_id %>/metrics" method="POST">
+            <input type="hidden" name="metric_id" id="edit_metric_id" />
+            <div class="form-group">
+                <label class="form-label">지표</label>
+                <input type="text" id="edit_metric_title" class="form-input" disabled />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label class="form-label">가중치 *</label>
+                    <input type="number" name="weight" id="edit_weight" class="form-input" step="0.01" min="0" max="1" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">최대 점수 *</label>
+                    <input type="number" name="max_score" id="edit_max_score" class="form-input" min="0" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">순서 *</label>
+                    <input type="number" name="order_no" id="edit_order_no" class="form-input" min="1" required />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">규칙 (JSON)</label>
+                <textarea name="rule" id="edit_rule" class="form-textarea"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('editMetricModal').style.display='none'">취소</button>
+                <button type="submit" class="btn btn-primary">저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditMetricModal(metricId, title, weight, maxScore, orderNo, rule) {
+    document.getElementById('edit_metric_id').value = metricId;
+    document.getElementById('edit_metric_title').value = title;
+    document.getElementById('edit_weight').value = weight;
+    document.getElementById('edit_max_score').value = maxScore;
+    document.getElementById('edit_order_no').value = orderNo;
+    document.getElementById('edit_rule').value = rule && rule !== '{}' ? rule : '';
+    document.getElementById('editMetricModal').style.display = 'flex';
+}
+</script>
