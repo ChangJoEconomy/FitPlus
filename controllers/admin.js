@@ -204,7 +204,6 @@ const deleteMetric = asyncHandler(async (req, res) => {
 
 
 // 채점 프로파일 관리
-
 const getScoringProfiles = asyncHandler(async (req, res) => {
     const { data: profiles, error } = await supabase
         .from('scoring_profile')
@@ -403,7 +402,8 @@ const addProfileMetric = asyncHandler(async (req, res) => {
 
     if (error) {
         console.error('Profile metric add error:', error);
-        return res.redirect(`/admin/scoring/${profile_id}?error=지표 추가 중 오류가 발생했습니다`);
+        if(error.code = '23505') return res.redirect(`/admin/scoring/${profile_id}?error=이미 존재하는 순서 번호입니다`);
+        else return res.redirect(`/admin/scoring/${profile_id}?error=지표 추가 중 오류가 발생했습니다`);
     }
 
     res.redirect(`/admin/scoring/${profile_id}?success=지표가 추가되었습니다`);

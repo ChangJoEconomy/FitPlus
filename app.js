@@ -20,17 +20,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// 인증 상태를 모든 뷰에 전달
+// 인증 상태(UI용)를 모든 뷰에 전달
 app.use(addAuthState);
 
 // 라우트 설정
 app.use("/", require("./routes/main"));
 app.use("/admin", require("./routes/admin"));
 
-// 404 핸들러 (존재하지 않는 라우트)
-app.use(notFound);
-
 // 전역 에러 핸들러
+app.use(notFound); // 404
 app.use(errorHandler);
 
 // 서버 시작
