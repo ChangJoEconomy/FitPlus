@@ -1,0 +1,109 @@
+<div class="page active">
+  <section class="page-header">
+    <div>
+      <h1>운동 완료! 🎉</h1>
+      <p class="muted"><%= session.exercise.name %> - <%= session.mode === 'ROUTINE' ? '루틴' : '자율' %> 운동</p>
+    </div>
+    <div class="actions">
+      <a href="/" class="primary">홈으로</a>
+    </div>
+  </section>
+
+  <div class="grid two">
+    <!-- 최종 점수 카드 -->
+    <div class="card hero" style="align-items: center; text-align: center;">
+      <h3>최종 점수</h3>
+      <div class="score"><%= session.final_score || 0 %></div>
+      <div class="summary-lines">
+        <p><%= session.summary_feedback || '운동을 완료했습니다!' %></p>
+      </div>
+      <% if (session.final_score >= 80) { %>
+        <span class="badge" style="background: #22c55e;">🌟 훌륭해요!</span>
+      <% } else if (session.final_score >= 60) { %>
+        <span class="badge" style="background: #eab308;">👍 좋아요!</span>
+      <% } else { %>
+        <span class="badge" style="background: #ef4444;">💪 분발하세요!</span>
+      <% } %>
+    </div>
+
+    <!-- 운동 요약 -->
+    <div class="card">
+      <h3>📊 운동 요약</h3>
+      <div class="stat-list">
+        <div class="stat">
+          <span>운동 시간</span>
+          <strong>
+            <% 
+              const mins = Math.floor((session.duration_sec || 0) / 60);
+              const secs = (session.duration_sec || 0) % 60;
+            %>
+            <%= mins %>분 <%= secs %>초
+          </strong>
+        </div>
+        <div class="stat">
+          <span>총 횟수</span>
+          <strong><%= session.total_reps || 0 %>회</strong>
+        </div>
+        <div class="stat">
+          <span>운동 종류</span>
+          <strong><%= session.exercise.name %></strong>
+        </div>
+        <div class="stat">
+          <span>운동 모드</span>
+          <strong><%= session.mode === 'ROUTINE' ? '루틴' : '자율' %></strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 세부 점수 -->
+  <% if (session.session_metric_result && session.session_metric_result.length > 0) { %>
+    <div class="card">
+      <div class="card-header">
+        <h3>📈 세부 점수</h3>
+        <span class="muted">각 평가 항목별 점수</span>
+      </div>
+      <ul class="detail-list">
+        <% session.session_metric_result.forEach(result => { %>
+          <li>
+            <span><%= result.metric.title %></span>
+            <strong><%= result.score %>점</strong>
+          </li>
+        <% }); %>
+      </ul>
+    </div>
+  <% } %>
+
+  <!-- 오늘의 운동 요약 -->
+  <div class="card">
+    <div class="card-header">
+      <h3>📅 오늘의 운동</h3>
+    </div>
+    <div class="stat-list">
+      <div class="stat">
+        <span>오늘 총 운동 시간</span>
+        <strong><%= totalTodayMinutes %>분</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- 추천 액션 -->
+  <div class="grid two">
+    <div class="card">
+      <h3>🏋️ 다음 운동</h3>
+      <p class="muted">다른 운동으로 계속 운동하세요!</p>
+      <div class="card-actions" style="margin-top: auto;">
+        <a href="/workout/free" class="ghost full">자율 운동</a>
+        <a href="/routine" class="primary full">내 루틴</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📚 자세 개선하기</h3>
+      <p class="muted">정확한 자세를 배워서 점수를 높여보세요!</p>
+      <a href="/learn/<%= session.exercise.code %>" class="ghost full">
+        <%= session.exercise.name %> 배우기 →
+      </a>
+    </div>
+  </div>
+</div>

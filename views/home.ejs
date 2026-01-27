@@ -1,0 +1,208 @@
+<div class="page active">
+  <section class="page-header">
+    <div>
+      <h1>반갑습니다, <%= typeof user !== 'undefined' && user ? user.nickname : '게스트' %>님!</h1>
+      <p class="date"><%= today %></p>
+    </div>
+  </section>
+
+  <div class="grid three">
+    <!-- 연속 운동 기록 카드 -->
+    <div class="card hero">
+      <div class="card-header">
+        <h3>🔥 나의 운동 기록</h3>
+      </div>
+      <div class="hero-metrics">
+        <div>
+          <span class="metric" id="streak-count">0</span>
+          <span class="metric-label">일 연속</span>
+        </div>
+        <div>
+          <span class="metric" id="today-minutes">0</span>
+          <span class="metric-label">분 오늘</span>
+        </div>
+      </div>
+      <p class="muted">꾸준함이 실력이 됩니다!</p>
+    </div>
+
+    <!-- 오늘의 퀘스트 -->
+    <div class="card">
+      <div class="card-header">
+        <h3>📋 오늘의 퀘스트</h3>
+        <a href="/quest" class="ghost" style="font-size: 12px;">전체보기</a>
+      </div>
+      <ul class="quest-list" id="daily-quests">
+        <li>
+          <span>스쿼트 3세트 완료</span>
+          <span class="muted">0/3</span>
+        </li>
+        <li>
+          <span>오늘 15분 운동하기</span>
+          <span class="muted">0/15분</span>
+        </li>
+        <li>
+          <span>점수 75점 이상 달성</span>
+          <span class="muted">미완료</span>
+        </li>
+      </ul>
+      <div class="quest">
+        <div class="progress">
+          <div class="progress-bar" style="width: 0%"></div>
+        </div>
+        <span class="quest-progress">일일 퀘스트 0/3 완료</span>
+      </div>
+    </div>
+
+    <!-- 주간 퀘스트 -->
+    <div class="card">
+      <div class="card-header">
+        <h3>📊 주간 목표</h3>
+      </div>
+      <ul class="quest-list" id="weekly-quests">
+        <li>
+          <span>이번 주 5일 운동</span>
+          <span class="muted">0/5일</span>
+        </li>
+        <li>
+          <span>총 운동시간 60분</span>
+          <span class="muted">0/60분</span>
+        </li>
+      </ul>
+      <div class="quest">
+        <div class="progress">
+          <div class="progress-bar" style="width: 0%"></div>
+        </div>
+        <span class="quest-progress">주간 퀘스트 0/2 완료</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 빠른 시작 섹션 -->
+  <div class="grid two">
+    <!-- 루틴 빠른 시작 -->
+    <div class="card">
+      <div class="card-header">
+        <h3>⚡ 루틴 빠른 시작</h3>
+        <a href="/routine" class="ghost" style="font-size: 12px;">루틴 관리</a>
+      </div>
+      <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
+        <div class="pill-list" id="quick-routines">
+          <div class="pill" onclick="startRoutine('default')">
+            🏋️ 전신 운동 A
+          </div>
+          <div class="pill" onclick="startRoutine('default')">
+            🦵 하체 집중
+          </div>
+          <div class="pill" onclick="startRoutine('default')">
+            💪 상체 루틴
+          </div>
+        </div>
+        <p class="card-note">
+          <a href="/routine/new">+ 새 루틴 만들기</a>
+        </p>
+      <% } else { %>
+        <p class="muted">로그인하면 나만의 루틴을 만들 수 있어요!</p>
+        <a href="/login" class="primary full">로그인하기</a>
+      <% } %>
+    </div>
+
+    <!-- 자율 운동 -->
+    <div class="card">
+      <div class="card-header">
+        <h3>🎯 자율 운동</h3>
+      </div>
+      <p class="muted">원하는 운동 하나를 선택해서 자유롭게 운동하세요</p>
+      <div class="chip-grid" id="exercise-chips">
+        <div class="chip" onclick="startFreeWorkout('squat')">
+          🏋️ 스쿼트
+        </div>
+        <div class="chip" onclick="startFreeWorkout('pushup')">
+          💪 푸시업
+        </div>
+        <div class="chip" onclick="startFreeWorkout('lunge')">
+          🦵 런지
+        </div>
+        <div class="chip" onclick="startFreeWorkout('plank')">
+          🧘 플랭크
+        </div>
+      </div>
+      <a href="/workout/free" class="ghost full" style="margin-top: 8px;">
+        전체 운동 보기 →
+      </a>
+    </div>
+  </div>
+
+  <!-- 운동 히스토리 미리보기 -->
+  <div class="grid two">
+    <!-- 출석 스트릭 -->
+    <div class="card">
+      <div class="card-header">
+        <h3>🌱 운동 출석</h3>
+        <a href="/history" class="ghost" style="font-size: 12px;">더보기</a>
+      </div>
+      <div class="streak-grid" id="streak-grid">
+        <% for (let i = 0; i < 28; i++) { %>
+          <div class="streak"></div>
+        <% } %>
+      </div>
+      <p class="muted">최근 4주간 운동 기록</p>
+    </div>
+
+    <!-- 티어 정보 -->
+    <div class="card">
+      <div class="card-header">
+        <h3>🏆 나의 티어</h3>
+      </div>
+      <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div style="font-size: 48px;">🥉</div>
+          <div>
+            <div style="font-weight: 700; font-size: 20px;">브론즈</div>
+            <p class="muted">다음 티어까지 150점 남음</p>
+            <div class="progress" style="width: 200px; margin-top: 8px;">
+              <div class="progress-bar" style="width: 30%"></div>
+            </div>
+          </div>
+        </div>
+      <% } else { %>
+        <p class="muted">로그인하면 티어 시스템을 이용할 수 있어요!</p>
+        <a href="/signup" class="primary">회원가입</a>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- 운동 배우기 섹션 -->
+  <div class="card">
+    <div class="card-header">
+      <h3>📚 운동 배우기</h3>
+      <a href="/learn" class="primary">시작하기</a>
+    </div>
+    <p class="muted">정확한 자세를 배우고 부상 없이 운동하세요. 튜토리얼을 완료하면 보너스 점수를 받을 수 있어요!</p>
+    <div class="pill-list">
+      <span class="pill small">🏋️ 스쿼트 기초</span>
+      <span class="pill small">💪 푸시업 기초</span>
+      <span class="pill small">🦵 런지 기초</span>
+      <span class="pill small">🧘 플랭크 기초</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 루틴 시작
+  function startRoutine(routineId) {
+    <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
+      window.location.href = `/workout/routine/${routineId}`;
+    <% } else { %>
+      window.location.href = '/login?error=로그인이 필요합니다';
+    <% } %>
+  }
+
+  // 자율 운동 시작
+  function startFreeWorkout(exerciseCode) {
+    <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
+      window.location.href = `/workout/free/${exerciseCode}`;
+    <% } else { %>
+      window.location.href = '/login?error=로그인이 필요합니다';
+    <% } %>
+  }
+</script>

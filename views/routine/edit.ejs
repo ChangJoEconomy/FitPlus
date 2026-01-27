@@ -1,0 +1,309 @@
+<div class="page active">
+  <section class="page-header">
+    <div>
+      <h1><%= isNew ? '새 루틴 만들기' : '루틴 수정' %></h1>
+      <p class="muted">운동 순서와 세트, 휴식 시간을 설정하세요</p>
+    </div>
+    <div class="actions">
+      <a href="/routine" class="ghost">← 돌아가기</a>
+    </div>
+  </section>
+
+  <form id="routineForm" class="grid two">
+    <!-- 루틴 기본 정보 -->
+    <div class="card">
+      <h3>루틴 정보</h3>
+      <div class="form-group">
+        <label for="routineName">루틴 이름</label>
+        <input 
+          type="text" 
+          id="routineName" 
+          name="name" 
+          placeholder="예: 전신 운동 A"
+          value="<%= routine ? routine.name : '' %>"
+          required
+        />
+      </div>
+    </div>
+
+    <!-- 운동 추가 -->
+    <div class="card">
+      <h3>운동 추가</h3>
+      <div class="form-group">
+        <label for="exerciseSelect">운동 선택</label>
+        <select id="exerciseSelect" class="form-select">
+          <option value="">운동을 선택하세요</option>
+          <% exercises.forEach(ex => { %>
+            <option value="<%= ex.exercise_id %>" data-name="<%= ex.name %>">
+              <%= ex.name %>
+            </option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="grid two" style="gap: 12px;">
+        <div class="form-group">
+          <label>목표 유형</label>
+          <select id="targetType">
+            <option value="REPS">횟수</option>
+            <option value="TIME">시간(초)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>목표 값</label>
+          <input type="number" id="targetValue" value="10" min="1" />
+        </div>
+        <div class="form-group">
+          <label>세트 수</label>
+          <input type="number" id="setsCount" value="3" min="1" />
+        </div>
+        <div class="form-group">
+          <label>휴식 시간(초)</label>
+          <input type="number" id="restSec" value="30" min="0" />
+        </div>
+      </div>
+      <button type="button" class="primary full" onclick="addStep()">+ 운동 추가</button>
+    </div>
+  </form>
+
+  <!-- 운동 순서 -->
+  <div class="card">
+    <div class="card-header">
+      <h3>운동 순서</h3>
+      <span class="muted" id="stepCount">0개의 운동</span>
+    </div>
+    
+    <div id="stepsList" class="step-list">
+      <p class="muted" id="emptyMessage">운동을 추가해주세요</p>
+    </div>
+  </div>
+
+  <!-- 저장 버튼 -->
+  <div class="card" style="flex-direction: row; justify-content: flex-end; gap: 10px;">
+    <a href="/routine" class="ghost">취소</a>
+    <button type="button" class="primary" onclick="saveRoutine()">
+      <%= isNew ? '루틴 저장' : '변경사항 저장' %>
+    </button>
+  </div>
+</div>
+
+<style>
+  .form-select {
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #f8fafc;
+    width: 100%;
+  }
+
+  .step-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .step-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .step-order {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .step-info {
+    flex: 1;
+  }
+
+  .step-info h4 {
+    margin: 0 0 4px 0;
+  }
+
+  .step-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .step-actions button {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .move-btn {
+    background: #e2e8f0;
+  }
+
+  .move-btn:hover {
+    background: #cbd5e1;
+  }
+
+  .remove-btn {
+    background: rgba(255, 92, 109, 0.1);
+    color: var(--danger);
+  }
+
+  .remove-btn:hover {
+    background: rgba(255, 92, 109, 0.2);
+  }
+</style>
+
+<script>
+  const exercises = <%- JSON.stringify(exercises) %>;
+  const existingRoutine = <%- routine ? JSON.stringify(routine) : 'null' %>;
+  const isNew = <%= isNew %>;
+  
+  let steps = [];
+
+  // 기존 루틴 데이터 로드
+  if (existingRoutine && existingRoutine.routine_setup) {
+    steps = existingRoutine.routine_setup.map(s => ({
+      exercise_id: s.exercise.exercise_id,
+      exercise_name: s.exercise.name,
+      target_type: s.target_type,
+      target_value: s.target_value,
+      sets: s.sets,
+      rest_sec: s.rest_sec
+    }));
+    renderSteps();
+  }
+
+  function addStep() {
+    const select = document.getElementById('exerciseSelect');
+    const exerciseId = select.value;
+    const exerciseName = select.options[select.selectedIndex].dataset.name;
+
+    if (!exerciseId) {
+      alert('운동을 선택해주세요');
+      return;
+    }
+
+    const step = {
+      exercise_id: exerciseId,
+      exercise_name: exerciseName,
+      target_type: document.getElementById('targetType').value,
+      target_value: parseInt(document.getElementById('targetValue').value) || 10,
+      sets: parseInt(document.getElementById('setsCount').value) || 3,
+      rest_sec: parseInt(document.getElementById('restSec').value) || 30
+    };
+
+    steps.push(step);
+    renderSteps();
+
+    // 입력 초기화
+    select.value = '';
+    document.getElementById('targetValue').value = '10';
+    document.getElementById('setsCount').value = '3';
+    document.getElementById('restSec').value = '30';
+  }
+
+  function removeStep(index) {
+    steps.splice(index, 1);
+    renderSteps();
+  }
+
+  function moveStep(index, direction) {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= steps.length) return;
+
+    const temp = steps[index];
+    steps[index] = steps[newIndex];
+    steps[newIndex] = temp;
+    renderSteps();
+  }
+
+  function renderSteps() {
+    const container = document.getElementById('stepsList');
+    const emptyMsg = document.getElementById('emptyMessage');
+    const countEl = document.getElementById('stepCount');
+
+    if (steps.length === 0) {
+      emptyMsg.style.display = 'block';
+      container.innerHTML = '<p class="muted" id="emptyMessage">운동을 추가해주세요</p>';
+      countEl.textContent = '0개의 운동';
+      return;
+    }
+
+    countEl.textContent = `${steps.length}개의 운동`;
+    
+    container.innerHTML = steps.map((step, index) => `
+      <div class="step-item" data-index="${index}">
+        <div class="step-order">${index + 1}</div>
+        <div class="step-info">
+          <h4>${step.exercise_name}</h4>
+          <p class="muted">
+            ${step.target_type === 'REPS' ? step.target_value + '회' : step.target_value + '초'}
+            × ${step.sets}세트
+            ${step.rest_sec > 0 ? `(휴식 ${step.rest_sec}초)` : ''}
+          </p>
+        </div>
+        <div class="step-actions">
+          <button type="button" class="move-btn" onclick="moveStep(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+          <button type="button" class="move-btn" onclick="moveStep(${index}, 1)" ${index === steps.length - 1 ? 'disabled' : ''}>↓</button>
+          <button type="button" class="remove-btn" onclick="removeStep(${index})">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function saveRoutine() {
+    const name = document.getElementById('routineName').value.trim();
+
+    if (!name) {
+      alert('루틴 이름을 입력해주세요');
+      return;
+    }
+
+    if (steps.length === 0) {
+      alert('최소 1개의 운동을 추가해주세요');
+      return;
+    }
+
+    const payload = {
+      name,
+      steps: steps.map(s => ({
+        exercise_id: s.exercise_id,
+        target_type: s.target_type,
+        target_value: s.target_value,
+        sets: s.sets,
+        rest_sec: s.rest_sec
+      }))
+    };
+
+    try {
+      const url = isNew ? '/api/routine' : `/api/routine/${existingRoutine.routine_id}`;
+      const method = isNew ? 'POST' : 'PUT';
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        window.location.href = '/routine';
+      } else {
+        alert(data.error || '저장에 실패했습니다');
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      alert('저장에 실패했습니다');
+    }
+  }
+</script>

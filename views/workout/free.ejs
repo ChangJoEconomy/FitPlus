@@ -1,0 +1,50 @@
+<div class="page active">
+  <section class="page-header">
+    <div>
+      <h1>자율 운동</h1>
+      <p class="muted">원하는 운동을 선택해서 자유롭게 운동하세요</p>
+    </div>
+    <div class="actions">
+      <a href="/" class="ghost">← 홈으로</a>
+    </div>
+  </section>
+
+  <% if (exercises.length === 0) { %>
+    <div class="card" style="text-align: center; padding: 48px;">
+      <h3>등록된 운동이 없어요</h3>
+      <p class="muted">관리자에게 문의해주세요</p>
+    </div>
+  <% } else { %>
+    <div class="grid three">
+      <% exercises.forEach(exercise => { %>
+        <div class="card exercise-card">
+          <div class="exercise-icon">
+            <% if (exercise.code === 'squat') { %>🏋️
+            <% } else if (exercise.code === 'pushup') { %>💪
+            <% } else if (exercise.code === 'lunge') { %>🦵
+            <% } else if (exercise.code === 'plank') { %>🧘
+            <% } else { %>🏃
+            <% } %>
+          </div>
+          <h3><%= exercise.name %></h3>
+          <p class="muted"><%= exercise.description || '운동 설명이 없습니다' %></p>
+          <a href="/workout/free/<%= exercise.code %>" class="primary full">
+            ▶️ 시작하기
+          </a>
+        </div>
+      <% }); %>
+    </div>
+  <% } %>
+</div>
+
+<style>
+  .exercise-card {
+    text-align: center;
+    align-items: center;
+  }
+
+  .exercise-icon {
+    font-size: 48px;
+    margin-bottom: 8px;
+  }
+</style>

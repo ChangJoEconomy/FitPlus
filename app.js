@@ -25,6 +25,7 @@ app.use(addAuthState);
 
 // 라우트 설정
 app.use("/", require("./routes/main"));
+app.use("/", require("./routes/workout"));
 app.use("/admin", require("./routes/admin"));
 
 // 전역 에러 핸들러

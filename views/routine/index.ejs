@@ -1,0 +1,116 @@
+<div class="page active">
+  <section class="page-header">
+    <div>
+      <h1>나의 루틴</h1>
+      <p class="muted">나만의 운동 루틴을 만들고 관리하세요</p>
+    </div>
+    <div class="actions">
+      <a href="/routine/new" class="primary">+ 새 루틴 만들기</a>
+    </div>
+  </section>
+
+  <% if (routines.length === 0) { %>
+    <div class="card" style="text-align: center; padding: 48px;">
+      <h3>아직 루틴이 없어요</h3>
+      <p class="muted">나만의 운동 루틴을 만들어보세요!</p>
+      <a href="/routine/new" class="primary" style="margin-top: 16px;">첫 루틴 만들기</a>
+    </div>
+  <% } else { %>
+    <div class="grid two">
+      <% routines.forEach(routine => { %>
+        <div class="card" data-routine-id="<%= routine.routine_id %>">
+          <div class="card-header">
+            <h3><%= routine.name %></h3>
+            <div class="card-actions">
+              <a href="/routine/<%= routine.routine_id %>/edit" class="ghost" title="수정">✏️</a>
+              <button class="danger" onclick="deleteRoutine('<%= routine.routine_id %>')" title="삭제">🗑️</button>
+            </div>
+          </div>
+          
+          <ul class="routine-list">
+            <% routine.routine_setup.sort((a, b) => a.order_no - b.order_no).forEach(step => { %>
+              <li>
+                <strong><%= step.exercise ? step.exercise.name : '알 수 없는 운동' %></strong>
+                <% if (step.target_type === 'REPS') { %>
+                  <%= step.target_value %>회 × <%= step.sets %>세트
+                <% } else { %>
+                  <%= step.target_value %>초 × <%= step.sets %>세트
+                <% } %>
+                <% if (step.rest_sec > 0) { %>
+                  (휴식 <%= step.rest_sec %>초)
+                <% } %>
+              </li>
+            <% }); %>
+          </ul>
+
+          <div class="card-actions" style="margin-top: auto;">
+            <a href="/workout/routine/<%= routine.routine_id %>" class="primary full">
+              ▶️ 운동 시작
+            </a>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  <% } %>
+</div>
+
+<!-- 삭제 확인 모달 -->
+<div class="modal" id="deleteModal" hidden>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>루틴 삭제</h3>
+      <button class="icon" onclick="closeDeleteModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p>정말로 이 루틴을 삭제하시겠습니까?</p>
+      <p class="muted">삭제된 루틴은 복구할 수 없습니다.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="ghost" onclick="closeDeleteModal()">취소</button>
+      <button class="danger" id="confirmDeleteBtn">삭제</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let routineToDelete = null;
+
+  function deleteRoutine(routineId) {
+    routineToDelete = routineId;
+    document.getElementById('deleteModal').hidden = false;
+  }
+
+  function closeDeleteModal() {
+    routineToDelete = null;
+    document.getElementById('deleteModal').hidden = true;
+  }
+
+  document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+    if (!routineToDelete) return;
+
+    try {
+      const response = await fetch(`/api/routine/${routineToDelete}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        // 해당 카드 제거
+        const card = document.querySelector(`[data-routine-id="${routineToDelete}"]`);
+        if (card) card.remove();
+        closeDeleteModal();
+        
+        // 루틴이 없으면 페이지 새로고침
+        if (document.querySelectorAll('[data-routine-id]').length === 0) {
+          location.reload();
+        }
+      } else {
+        const data = await response.json();
+        alert(data.error || '삭제에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('삭제에 실패했습니다.');
+    }
+  });
+</script>
