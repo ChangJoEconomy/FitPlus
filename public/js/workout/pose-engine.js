@@ -41,7 +41,7 @@ const LANDMARKS = {
 };
 
 class PoseEngine {
-  constructor() {
+  constructor(options = {}) {
     this.pose = null;
     this.isInitialized = false;
     this.isRunning = false;
@@ -50,6 +50,18 @@ class PoseEngine {
     // 콜백
     this.onPoseDetected = null;
     this.onError = null;
+
+    // One Euro Filter 스무딩 (기본 활성화)
+    this.useOneEuroFilter = options.useOneEuroFilter ?? true;
+    this.landmarkSmoother = null;
+    this.worldLandmarkSmoother = null;
+    
+    // 필터 설정 (SMOOTHER_PRESETS 참조)
+    this.smootherConfig = options.smootherConfig || {
+      minCutoff: 1.0,  // 낮을수록 부드러움
+      beta: 0.5,       // 높을수록 빠른 움직임에 반응
+      dCutoff: 1.0
+    };
   }
 
   /**
@@ -67,12 +79,19 @@ class PoseEngine {
       // 설정
       this.pose.setOptions({
         modelComplexity: 1,           // 0: Lite, 1: Full, 2: Heavy
-        smoothLandmarks: true,         // 랜드마크 스무딩
+        smoothLandmarks: !this.useOneEuroFilter,  // One Euro Filter 사용 시 내장 스무딩 비활성화
         enableSegmentation: false,     // 배경 세그멘테이션 (사용안함)
         smoothSegmentation: false,
         minDetectionConfidence: 0.5,   // 최소 감지 신뢰도
         minTrackingConfidence: 0.5     // 최소 추적 신뢰도
       });
+
+      // One Euro Filter 초기화
+      if (this.useOneEuroFilter && typeof LandmarkSmoother !== 'undefined') {
+        this.landmarkSmoother = new LandmarkSmoother(this.smootherConfig);
+        this.worldLandmarkSmoother = new LandmarkSmoother(this.smootherConfig);
+        console.log('[PoseEngine] One Euro Filter 활성화:', this.smootherConfig);
+      }
 
       // 결과 콜백 설정
       this.pose.onResults((results) => this.handleResults(results));
@@ -110,13 +129,21 @@ class PoseEngine {
       return;
     }
 
-    // 정규화된 랜드마크 (0~1 범위)
-    const landmarks = results.poseLandmarks;
-    
-    // 월드 좌표 랜드마크 (미터 단위)
-    const worldLandmarks = results.poseWorldLandmarks;
+    const timestamp = performance.now();
 
-    // 관절 각도 계산
+    // 정규화된 랜드마크 (0~1 범위) - One Euro Filter 적용
+    let landmarks = results.poseLandmarks;
+    if (this.landmarkSmoother) {
+      landmarks = this.landmarkSmoother.filter(timestamp, landmarks);
+    }
+    
+    // 월드 좌표 랜드마크 (미터 단위) - One Euro Filter 적용
+    let worldLandmarks = results.poseWorldLandmarks;
+    if (this.worldLandmarkSmoother && worldLandmarks) {
+      worldLandmarks = this.worldLandmarkSmoother.filter(timestamp, worldLandmarks);
+    }
+
+    // 관절 각도 계산 (필터링된 랜드마크 사용)
     const angles = this.calculateAllAngles(landmarks);
 
     // 콜백 호출
@@ -125,7 +152,7 @@ class PoseEngine {
         landmarks,
         worldLandmarks,
         angles,
-        timestamp: performance.now()
+        timestamp
       });
     }
   }
@@ -330,6 +357,36 @@ class PoseEngine {
   stop() {
     this.isRunning = false;
     console.log('[PoseEngine] 포즈 감지 정지');
+  }
+
+  /**
+   * 필터 리셋 (새 세션 시작 시)
+   */
+  resetFilters() {
+    if (this.landmarkSmoother) {
+      this.landmarkSmoother.reset();
+    }
+    if (this.worldLandmarkSmoother) {
+      this.worldLandmarkSmoother.reset();
+    }
+    console.log('[PoseEngine] 필터 리셋 완료');
+  }
+
+  /**
+   * 필터 파라미터 변경
+   * @param {string} presetName - 프리셋 이름: 'ULTRA_SMOOTH', 'SMOOTH', 'RESPONSIVE', 'MINIMAL'
+   */
+  setSmootherPreset(presetName) {
+    if (typeof SMOOTHER_PRESETS !== 'undefined' && SMOOTHER_PRESETS[presetName]) {
+      const preset = SMOOTHER_PRESETS[presetName];
+      if (this.landmarkSmoother) {
+        this.landmarkSmoother.setParameters(preset.minCutoff, preset.beta, preset.dCutoff);
+      }
+      if (this.worldLandmarkSmoother) {
+        this.worldLandmarkSmoother.setParameters(preset.minCutoff, preset.beta, preset.dCutoff);
+      }
+      console.log('[PoseEngine] 스무딩 프리셋 변경:', presetName);
+    }
   }
 
   /**

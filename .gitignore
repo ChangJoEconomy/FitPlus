@@ -114,3 +114,6 @@ config/local.json
 # Uploads directory (if you have file uploads)
 uploads/
 public/uploads/
+
+/core
+message.txt
