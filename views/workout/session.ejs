@@ -3,6 +3,16 @@
   const currentExercise = exercise;
 %>
 
+<!-- MediaPipe Pose CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+<!-- FitPlus AI 모듈 -->
+<script src="/js/workout/pose-engine.js"></script>
+<script src="/js/workout/scoring-engine.js"></script>
+<script src="/js/workout/rep-counter.js"></script>
+<script src="/js/workout/session-buffer.js"></script>
+
 <div class="workout-container">
   <!-- 상단 헤더 -->
   <header class="workout-header">
@@ -149,6 +159,12 @@
     <% } %>
   };
 
+  // AI 엔진 인스턴스
+  let poseEngine = null;
+  let scoringEngine = null;
+  let repCounter = null;
+  let sessionBuffer = null;
+
   // 상태 관리
   let state = {
     phase: 'PREPARING', // PREPARING, WORKING, RESTING, PAUSED, FINISHED
@@ -162,14 +178,17 @@
     isPaused: false,
     timerInterval: null,
     restInterval: null,
-    alertCooldown: false
+    alertCooldown: false,
+    frameLoop: null
   };
 
   // DOM 요소
   const videoElement = document.getElementById('videoElement');
+  const poseCanvas = document.getElementById('poseCanvas');
   const cameraOverlay = document.getElementById('cameraOverlay');
   const statusBadge = document.getElementById('statusBadge');
   const liveScoreEl = document.getElementById('liveScore');
+  const scoreBreakdownEl = document.getElementById('scoreBreakdown');
   const repCountEl = document.getElementById('repCount');
   const setCountEl = document.getElementById('setCount');
   const timerValueEl = document.getElementById('timerValue');
@@ -183,18 +202,85 @@
   const pauseBtn = document.getElementById('pauseBtn');
   const finishBtn = document.getElementById('finishBtn');
 
+  // AI 엔진 초기화
+  async function initAIEngines() {
+    try {
+      cameraOverlay.innerHTML = '<p>🤖 AI 엔진 로딩 중...</p>';
+      
+      // 1. PoseEngine 초기화
+      poseEngine = new PoseEngine();
+      await poseEngine.initialize();
+      
+      // 2. ScoringEngine 초기화
+      scoringEngine = new ScoringEngine(workoutData.scoringProfile);
+      
+      // 3. RepCounter 초기화
+      repCounter = new RepCounter(workoutData.exercise.code);
+      repCounter.onRepComplete = handleRepComplete;
+      
+      // 4. PoseEngine 콜백 설정
+      poseEngine.onPoseDetected = handlePoseDetected;
+      
+      console.log('[Session] AI 엔진 초기화 완료');
+      return true;
+    } catch (error) {
+      console.error('[Session] AI 엔진 초기화 실패:', error);
+      cameraOverlay.innerHTML = '<p>❌ AI 엔진 로딩 실패</p><p class="muted">페이지를 새로고침해주세요</p>';
+      return false;
+    }
+  }
+
   // 카메라 초기화
   async function initCamera() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: 640, height: 480 }
+      cameraOverlay.innerHTML = '<p>📷 카메라를 연결 중...</p>';
+      
+      // AI 엔진 먼저 초기화
+      const aiReady = await initAIEngines();
+      if (!aiReady) return;
+      
+      // 카메라 스트림 가져오기
+      // const stream = await navigator.mediaDevices.getUserMedia({
+      //   video: { 
+      //     facingMode: 'user', 
+      //     width: { ideal: 640 }, 
+      //     height: { ideal: 480 } 
+      //   }
+      // });
+      // 디버깅 용으로 화면 캡처로 대체
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { width: 640, height: 480 }
       });
+      
       videoElement.srcObject = stream;
-      cameraOverlay.innerHTML = '<p>✅ 카메라 준비 완료</p><p class="muted">전신이 잘 보이도록 위치를 조정하세요</p>';
+      
+      // 비디오 메타데이터 로드 후 캔버스 크기 설정
+      videoElement.onloadedmetadata = () => {
+        poseCanvas.width = videoElement.videoWidth;
+        poseCanvas.height = videoElement.videoHeight;
+      };
+      
+      cameraOverlay.innerHTML = '<p>✅ 준비 완료</p><p class="muted">전신이 잘 보이도록 위치를 조정하세요</p>';
       startBtn.disabled = false;
+      
     } catch (error) {
-      console.error('Camera error:', error);
-      cameraOverlay.innerHTML = '<p>❌ 카메라 연결 실패</p><p class="muted">카메라 권한을 확인해주세요</p>';
+      console.error('[Session] 카메라 에러:', error);
+      
+      // 개발용: 화면 캡처로 대체
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { width: 640, height: 480 }
+        });
+        videoElement.srcObject = stream;
+        videoElement.onloadedmetadata = () => {
+          poseCanvas.width = videoElement.videoWidth;
+          poseCanvas.height = videoElement.videoHeight;
+        };
+        cameraOverlay.innerHTML = '<p>✅ 화면 캡처 모드</p><p class="muted">개발용 모드입니다</p>';
+        startBtn.disabled = false;
+      } catch (e) {
+        cameraOverlay.innerHTML = '<p>❌ 카메라 연결 실패</p><p class="muted">카메라 권한을 확인해주세요</p>';
+      }
     }
   }
 
@@ -219,6 +305,10 @@
       state.sessionId = data.session.session_id;
       state.phase = 'WORKING';
       
+      // SessionBuffer 초기화
+      sessionBuffer = new SessionBuffer(state.sessionId);
+      sessionBuffer.addEvent('SESSION_START', { exercise: workoutData.exercise.code });
+      
       updateStatus('running', '운동 중');
       cameraOverlay.hidden = true;
       startBtn.hidden = true;
@@ -227,13 +317,171 @@
 
       // 타이머 시작
       startTimer();
-
-      // AI 연동 시작 (추후 구현)
-      // startPoseDetection();
+      
+      // AI 포즈 감지 시작
+      startPoseDetection();
 
     } catch (error) {
-      console.error('Start error:', error);
+      console.error('[Session] 시작 에러:', error);
       alert('운동 시작에 실패했습니다: ' + error.message);
+    }
+  }
+
+  // 포즈 감지 시작
+  function startPoseDetection() {
+    if (!poseEngine) return;
+    
+    poseEngine.start();
+    
+    // 프레임 루프 시작
+    const processFrame = async () => {
+      if (poseEngine && poseEngine.isRunning && !state.isPaused) {
+        await poseEngine.send(videoElement);
+        
+        // 캔버스에 포즈 그리기
+        if (poseEngine.lastResults) {
+          poseEngine.drawPose(poseCanvas, poseEngine.lastResults);
+        }
+      }
+      
+      if (state.phase !== 'FINISHED') {
+        state.frameLoop = requestAnimationFrame(processFrame);
+      }
+    };
+    
+    state.frameLoop = requestAnimationFrame(processFrame);
+    console.log('[Session] 포즈 감지 시작');
+  }
+
+  // 포즈 감지 결과 처리
+  function handlePoseDetected(poseData) {
+    if (state.phase !== 'WORKING' || state.isPaused) return;
+    
+    const { angles } = poseData;
+    
+    // 1. 점수 계산
+    const scoreResult = scoringEngine.calculate(angles);
+    updateScoreDisplay(scoreResult);
+    
+    // 2. 횟수 감지
+    repCounter.update(angles, scoreResult.score);
+    
+    // 3. 세션 버퍼에 저장
+    if (sessionBuffer) {
+      sessionBuffer.addScore(scoreResult);
+    }
+    
+    // 4. 피드백 체크
+    checkFeedback(scoreResult);
+  }
+
+  // 횟수 완료 처리
+  function handleRepComplete(repRecord) {
+    state.currentRep = repRecord.repNumber;
+    repCountEl.textContent = state.currentRep;
+    
+    // 버퍼에 기록
+    if (sessionBuffer) {
+      sessionBuffer.addRep(repRecord);
+    }
+    
+    // 루틴 모드 체크
+    if (workoutData.mode === 'ROUTINE' && workoutData.routine) {
+      checkRoutineProgress();
+    }
+    
+    // 시각적 피드백
+    showRepFeedback(repRecord);
+  }
+
+  // 점수 표시 업데이트
+  function updateScoreDisplay(scoreResult) {
+    state.liveScore = scoreResult.score;
+    liveScoreEl.textContent = scoreResult.score;
+    
+    // 점수에 따른 색상
+    if (scoreResult.score >= 80) {
+      liveScoreEl.style.color = '#22c55e';
+    } else if (scoreResult.score >= 60) {
+      liveScoreEl.style.color = '#eab308';
+    } else {
+      liveScoreEl.style.color = '#ef4444';
+    }
+    
+    // 세부 점수 표시
+    if (scoreResult.breakdown && scoreResult.breakdown.length > 0) {
+      scoreBreakdownEl.innerHTML = scoreResult.breakdown
+        .slice(0, 3) // 상위 3개만 표시
+        .map(item => `
+          <div class="score-item">
+            <span>${item.title}</span>
+            <span>${item.score}/${item.maxScore}</span>
+          </div>
+        `).join('');
+    }
+  }
+
+  // 피드백 체크
+  function checkFeedback(scoreResult) {
+    if (state.alertCooldown) return;
+    
+    // 점수가 낮은 항목 찾기
+    const lowScoreItem = scoreResult.breakdown?.find(
+      item => item.feedback && item.score < item.maxScore * 0.6
+    );
+    
+    if (lowScoreItem) {
+      showAlert('자세 교정 필요', lowScoreItem.feedback);
+    }
+  }
+
+  // 횟수 완료 피드백
+  function showRepFeedback(repRecord) {
+    const msg = repRecord.score >= 80 ? '완벽해요! 👏' :
+                repRecord.score >= 60 ? '좋아요! 👍' : '계속 해보세요!';
+    
+    // 잠깐 표시되는 토스트 메시지
+    showToast(`${repRecord.repNumber}회 ${msg}`);
+  }
+
+  // 토스트 메시지
+  function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      z-index: 1000;
+      animation: fadeInOut 2s ease;
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+  }
+
+  // 루틴 진행도 체크
+  function checkRoutineProgress() {
+    const currentStep = workoutData.routine.routine_setup[state.currentStepIndex];
+    if (!currentStep) return;
+    
+    // 목표 횟수 달성
+    if (currentStep.target_type === 'REPS' && state.currentRep >= currentStep.target_value) {
+      if (state.currentSet < currentStep.sets) {
+        // 세트 완료, 휴식 시작
+        if (sessionBuffer) {
+          sessionBuffer.completeSet(currentStep.rest_sec);
+        }
+        startRest(currentStep.rest_sec);
+      } else {
+        // 다음 운동으로
+        nextExercise();
+      }
     }
   }
 
@@ -268,10 +516,14 @@
       state.phase = 'PAUSED';
       updateStatus('paused', '일시정지');
       pauseBtn.innerHTML = '▶️ 계속하기';
+      if (poseEngine) poseEngine.stop();
+      if (sessionBuffer) sessionBuffer.addEvent('PAUSE');
     } else {
       state.phase = 'WORKING';
       updateStatus('running', '운동 중');
       pauseBtn.innerHTML = '⏸️ 일시정지';
+      if (poseEngine) poseEngine.start();
+      if (sessionBuffer) sessionBuffer.addEvent('RESUME');
     }
   }
 
@@ -283,6 +535,9 @@
     timerLabelEl.textContent = '휴식 시간';
     restTimerEl.hidden = false;
     restValueEl.textContent = seconds;
+    
+    if (poseEngine) poseEngine.stop();
+    if (sessionBuffer) sessionBuffer.addEvent('REST_START', { duration: seconds });
 
     state.restInterval = setInterval(() => {
       if (!state.isPaused) {
@@ -304,11 +559,21 @@
     timerLabelEl.textContent = '운동 시간';
     updateStatus('running', '운동 중');
     
-    // 다음 세트로
+    // 다음 세트 준비
     state.currentSet++;
     setCountEl.textContent = state.currentSet;
     state.currentRep = 0;
     repCountEl.textContent = 0;
+    
+    // RepCounter 리셋 (횟수만)
+    if (repCounter) {
+      repCounter.repCount = 0;
+    }
+    
+    if (poseEngine) poseEngine.start();
+    if (sessionBuffer) sessionBuffer.addEvent('REST_END');
+    
+    showAlert('다음 세트', `${state.currentSet}세트 시작!`);
   }
 
   // 알림 표시
@@ -323,38 +588,7 @@
     setTimeout(() => {
       alertContainer.hidden = true;
       state.alertCooldown = false;
-    }, 5000);
-  }
-
-  // 점수 업데이트 (AI로부터 호출됨)
-  function updateScore(score, breakdown) {
-    state.liveScore = score;
-    liveScoreEl.textContent = score;
-
-    // 점수가 낮으면 알림
-    if (score < 50 && !state.alertCooldown) {
-      const worstMetric = breakdown.reduce((min, m) => m.score < min.score ? m : min, breakdown[0]);
-      showAlert('자세 교정 필요', worstMetric.feedback || '자세를 확인해주세요');
-    }
-  }
-
-  // 횟수 증가 (AI로부터 호출됨)
-  function incrementRep() {
-    state.currentRep++;
-    repCountEl.textContent = state.currentRep;
-
-    // 루틴 모드에서 목표 달성 시 휴식
-    if (workoutData.mode === 'ROUTINE') {
-      const currentStep = workoutData.routine.routine_setup[state.currentStepIndex];
-      if (currentStep && currentStep.target_type === 'REPS' && state.currentRep >= currentStep.target_value) {
-        if (state.currentSet < currentStep.sets) {
-          startRest(currentStep.rest_sec);
-        } else {
-          // 다음 운동으로 이동
-          nextExercise();
-        }
-      }
-    }
+    }, 3000);
   }
 
   // 다음 운동으로 (루틴 모드)
@@ -378,39 +612,62 @@
     state.currentRep = 0;
     setCountEl.textContent = 1;
     repCountEl.textContent = 0;
+    
+    if (repCounter) repCounter.reset();
+    if (sessionBuffer) sessionBuffer.addEvent('NEXT_EXERCISE', { 
+      stepIndex: state.currentStepIndex 
+    });
+    
+    showAlert('다음 운동', routineSteps[state.currentStepIndex].exercise?.name || '다음 운동');
   }
 
   // 운동 종료
   async function finishWorkout() {
     state.phase = 'FINISHED';
+    
+    // 리소스 정리
     clearInterval(state.timerInterval);
     clearInterval(state.restInterval);
+    if (state.frameLoop) {
+      cancelAnimationFrame(state.frameLoop);
+    }
+    if (poseEngine) {
+      poseEngine.destroy();
+    }
+    
+    updateStatus('finished', '완료');
 
     try {
+      // 세션 버퍼에서 데이터 추출
+      const sessionData = sessionBuffer ? sessionBuffer.export() : {
+        duration_sec: state.totalTime,
+        total_reps: state.currentRep,
+        final_score: state.liveScore || 0,
+        summary_feedback: generateSummary()
+      };
+      
       // 세션 종료 API 호출
       const response = await fetch(`/api/workout/session/${state.sessionId}/end`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          duration_sec: state.totalTime,
-          total_reps: state.currentRep,
-          final_score: state.liveScore || 0,
-          summary_feedback: generateSummary()
-        })
+        body: JSON.stringify(sessionData)
       });
 
       if (response.ok) {
+        // 로컬 스토리지 정리
+        if (sessionBuffer) sessionBuffer.clearStorage();
         window.location.href = `/workout/result/${state.sessionId}`;
       } else {
         throw new Error('세션 종료 실패');
       }
     } catch (error) {
-      console.error('Finish error:', error);
-      window.location.href = '/';
+      console.error('[Session] 종료 에러:', error);
+      // 실패해도 결과 페이지로 이동 시도
+      window.location.href = `/workout/result/${state.sessionId}`;
     }
   }
 
-  // 요약 생성
+  // 요약 생성 (fallback)
   function generateSummary() {
     if (state.liveScore >= 80) {
       return '훌륭해요! 자세가 매우 좋습니다.';
@@ -438,8 +695,46 @@
     finishWorkout();
   }
 
+  // 페이지 언로드 시 정리
+  window.addEventListener('beforeunload', (e) => {
+    if (state.phase === 'WORKING' || state.phase === 'RESTING' || state.phase === 'PAUSED') {
+      // 데이터 백업
+      if (sessionBuffer) sessionBuffer.saveToStorage();
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
   // 초기화
   document.addEventListener('DOMContentLoaded', () => {
     initCamera();
   });
 </script>
+
+<style>
+  @keyframes fadeInOut {
+    0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+    15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  }
+  
+  #poseCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  
+  .score-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+</style>

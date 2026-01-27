@@ -9,7 +9,7 @@ const formatKoreanDate = () => {
     return `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
 };
 
-// admin 계정은 일반 페이지 접근 불가
+// admin 계정은 일반 페이지로 들어가지 않게 막기
 const blockAdmin = (req, res, next) => {
     if (res.locals.isAuthenticated && res.locals.user?.login_id === 'admin') {
         return res.redirect('/admin');
