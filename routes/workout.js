@@ -17,9 +17,12 @@ const {
     endWorkoutSession,
     recordWorkoutSet,
     recordSessionEvent,
+    recordRepEvent,
     getWorkoutResult,
-    getExercises
+    getExercises,
+    getPoseTestPage
 } = require('../controllers/workout');
+
 
 const router = express.Router();
 
@@ -59,6 +62,11 @@ router.get('/api/exercises', getExercises);
 router.post('/api/workout/session', requireAuth, startWorkoutSession);
 router.put('/api/workout/session/:sessionId/end', requireAuth, endWorkoutSession);
 router.post('/api/workout/session/:sessionId/set', requireAuth, recordWorkoutSet);
-router.post('/api/workout/session/:sessionId/event', requireAuth, recordSessionEvent);
+
+// Rep 이벤트 API (클라이언트에서 계산된 점수 저장)
+router.post('/api/workout/session/:sessionId/rep', requireAuth, recordRepEvent);
+
+// 테스트 라우트
+router.get('/workout/pose-test', getPoseTestPage);
 
 module.exports = router;

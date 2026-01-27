@@ -1,0 +1,199 @@
+<div class="workout-container">
+    <header class="workout-header">
+        <div class="workout-title">
+            <h2>AI 포즈 감지 테스트</h2>
+            <span class="muted">실시간 관절 각도 및 Rep 카운팅 검증</span>
+        </div>
+        <div class="status-badges">
+            <span id="fpsBadge" class="status preparing">FPS: --</span>
+        </div>
+    </header>
+
+    <main class="workout-main">
+        <div class="camera-section" style="flex: 2;">
+            <div class="camera-frame" style="width: 100%;">
+                <video id="video" autoplay playsinline style="display: none;"></video>
+                <canvas id="output_canvas" style="width: 800px; height: 800px; border-radius: 12px;"></canvas>
+            </div>
+        </div>
+
+
+        <aside class="workout-sidebar">
+            <div class="card">
+                <h3>지표 (Metrics)</h3>
+                <div id="metricsDisplay" style="font-family: monospace; white-space: pre-wrap; font-size: 0.9rem;">
+                    대기 중...
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>점수 (Scoring)</h3>
+                <div id="scoreDisplay" style="font-size: 2rem; font-weight: bold; color: var(--primary);">
+                    --
+                </div>
+                <div id="scoreBreakdown" style="font-size: 0.8rem; margin-top: 8px;"></div>
+            </div>
+
+            <div class="card">
+                <h3>카운터 (Counter)</h3>
+                <div style="display: flex; gap: 20px;">
+                    <div>
+                        <div class="muted">Reps</div>
+                        <div id="repCount" style="font-size: 2rem; font-weight: bold;">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>피드백</h3>
+                <div id="feedbackBox" style="color: var(--warning);"></div>
+            </div>
+        </aside>
+    </main>
+</div>
+
+<script type="module">
+    import { PoseDetector } from '/js/poseDetector.js';
+    import { computeSideSquatMetrics, SideSquatSmoother, evaluateSideSquat } from '/js/exercises/sideSquat.js';
+    import { updateRepCounter, RepCounterState } from '/js/repCounter.js';
+    import { ExerciseScorer } from '/js/scoring.js';
+
+    const video = document.getElementById('video');
+    const canvasElement = document.getElementById('output_canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+    const fpsBadge = document.getElementById('fpsBadge');
+    const metricsDisplay = document.getElementById('metricsDisplay');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const scoreBreakdown = document.getElementById('scoreBreakdown');
+    const repCountEl = document.getElementById('repCount');
+    const feedbackBox = document.getElementById('feedbackBox');
+
+    let detector, smoother, scorer, repState;
+    let lastTime = 0;
+    let frames = 0;
+
+    async function init() {
+        // 1. 카메라 시작
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 720, height: 720 }
+        });
+        video.srcObject = stream;
+        await video.play();
+
+        canvasElement.width = video.videoWidth;
+        canvasElement.height = video.videoHeight;
+
+        // 2. AI 초기화
+        detector = new PoseDetector();
+        await detector.init();
+
+        smoother = new SideSquatSmoother();
+        scorer = new ExerciseScorer('side_squat');
+        repState = new RepCounterState();
+
+        requestAnimationFrame(render);
+    }
+
+    function render(now) {
+        frames++;
+        if (now - lastTime >= 1000) {
+            fpsBadge.textContent = `FPS: ${frames}`;
+            frames = 0;
+            lastTime = now;
+        }
+
+        detector.detect(video, (result) => {
+            // 그리기 루틴
+            drawPose(result);
+
+            // landmarks (신버전 API 속성명)
+            if (result.landmarks && result.landmarks.length > 0) {
+                // sideSquat에서 사용할 포맷으로 변환
+                const resultForCompute = {
+                    poseLandmarks: result.landmarks,
+                    poseWorldLandmarks: result.worldLandmarks
+                };
+
+                // 1. 지표 계산
+                let metrics = computeSideSquatMetrics(resultForCompute);
+                // 2. 스무딩
+                metrics = smoother.smooth(metrics, performance.now());
+
+                if (metrics) {
+                    metricsDisplay.textContent = JSON.stringify(metrics, null, 2);
+
+                    // 3. 실시간 점수
+                    const frameScore = scorer.computeFrameScore(metrics);
+                    if (frameScore) {
+                        scoreDisplay.textContent = frameScore.total;
+                        scoreBreakdown.innerHTML = frameScore.components
+                            .map(c => `<div>${c.label}: ${c.score || '--'} (${c.status})</div>`)
+                            .join('');
+                    }
+
+                    // 4. Rep 카운팅 및 점수
+                    const repEvent = updateRepCounter('side_squat', metrics, repState, performance.now());
+                    const repScore = scorer.updateRepFeatures(metrics, repState, repEvent);
+
+                    if (repEvent) {
+                        repCountEl.textContent = repState.count;
+                        console.log('Rep Complete:', repScore);
+                    }
+
+                    // 5. 피드백
+                    const feedback = evaluateSideSquat(metrics);
+                    feedbackBox.innerHTML = feedback.map(f => `<div>• ${f}</div>`).join('');
+                }
+            }
+        });
+
+        requestAnimationFrame(render);
+    }
+
+    // MediaPipe Pose 연결 정보 (뼈대)
+    const POSE_CONNECTIONS = [
+        [11, 12], // 어깨
+        [11, 13], [13, 15], // 왼팔
+        [12, 14], [14, 16], // 오른팔
+        [11, 23], [12, 24], // 상체
+        [23, 24], // 골반
+        [23, 25], [25, 27], // 왼다리
+        [24, 26], [26, 28], // 오른다리
+        [27, 29], [29, 31], // 왼발
+        [28, 30], [30, 32], // 오른발
+    ];
+
+    function drawPose(result) {
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        canvasCtx.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+
+        if (result.landmarks && result.landmarks.length > 0) {
+            const landmarks = result.landmarks[0];
+
+            // 1. 뼈대 선 그리기
+            canvasCtx.strokeStyle = '#00FF00';
+            canvasCtx.lineWidth = 3;
+            POSE_CONNECTIONS.forEach(([i, j]) => {
+                const a = landmarks[i];
+                const b = landmarks[j];
+                if (a && b) {
+                    canvasCtx.beginPath();
+                    canvasCtx.moveTo(a.x * canvasElement.width, a.y * canvasElement.height);
+                    canvasCtx.lineTo(b.x * canvasElement.width, b.y * canvasElement.height);
+                    canvasCtx.stroke();
+                }
+            });
+
+            // 2. 관절 점 그리기
+            landmarks.forEach(lm => {
+                canvasCtx.beginPath();
+                canvasCtx.arc(lm.x * canvasElement.width, lm.y * canvasElement.height, 5, 0, 2 * Math.PI);
+                canvasCtx.fillStyle = '#eb4c42';
+                canvasCtx.fill();
+            });
+        }
+    }
+
+
+    init().catch(console.error);
+</script>

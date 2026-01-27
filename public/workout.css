@@ -47,10 +47,12 @@
 
 .workout-main {
   display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 24px;
-  padding: 24px;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  padding: 16px;
   flex: 1;
+  height: calc(100vh - 70px);
+  overflow: hidden;
 }
 
 /* 알림 영역 */
@@ -87,15 +89,19 @@
 .camera-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  align-items: center;
+  height: 100%;
 }
 
 .camera-frame {
   position: relative;
   background: #1e293b;
-  border-radius: 20px;
+  border-radius: 16px;
   overflow: hidden;
-  aspect-ratio: 4/3;
+  height: calc(100vh - 150px);
+  width: auto;
+  aspect-ratio: 3/4;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -116,12 +122,13 @@
   width: 100%;
   height: 100%;
   transform: scaleX(-1);
+  pointer-events: none;
 }
 
 .camera-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(15, 23, 42, 0.4);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -129,6 +136,16 @@
   gap: 8px;
   color: white;
   font-size: 18px;
+  transition: opacity 0.3s ease;
+}
+
+.camera-overlay.ready {
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.camera-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .camera-overlay .muted {
@@ -146,12 +163,15 @@
 .workout-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .workout-sidebar .card {
   background: #1e293b;
   border-color: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
 .workout-sidebar h3,

@@ -3,6 +3,141 @@
   const currentExercise = exercise;
 %>
 
+<!-- MediaPipe Pose 스켈레톤 연결선 정의 -->
+<script type="module">
+import { PoseDetector } from '/js/poseDetector.js';
+
+// POSE_CONNECTIONS 정의 (core/render.py에서 포팅)
+const POSE_CONNECTIONS = [
+    [0, 1], [1, 2], [2, 3], [3, 7],
+    [0, 4], [4, 5], [5, 6], [6, 8],
+    [9, 10],
+    [11, 12], [11, 13], [13, 15], [15, 17], [15, 19], [15, 21], [17, 19],
+    [12, 14], [14, 16], [16, 18], [16, 20], [16, 22], [18, 20],
+    [11, 23], [12, 24], [23, 24],
+    [23, 25], [24, 26],
+    [25, 27], [27, 29], [29, 31], [27, 31],
+    [26, 28], [28, 30], [30, 32], [28, 32],
+];
+
+// 전역으로 포즈 감지기 인스턴스와 함수 등록
+window.poseDetector = null;
+window.isDetecting = false;
+window.animationFrameId = null;
+
+// 포즈 감지기 초기화
+window.initPoseDetector = async function() {
+    const statusEl = document.getElementById('modelStatus');
+    try {
+        statusEl.textContent = '🔄 AI 모델 로딩 중...';
+        window.poseDetector = new PoseDetector();
+        await window.poseDetector.init();
+        statusEl.textContent = '✅ AI 모델 준비 완료';
+        statusEl.classList.add('ready');
+        console.log('MediaPipe Pose Landmarker initialized');
+        return true;
+    } catch (error) {
+        console.error('Failed to init pose detector:', error);
+        statusEl.textContent = '❌ AI 모델 로딩 실패';
+        return false;
+    }
+};
+
+// 스켈레톤 그리기
+window.drawLandmarks = function(canvas, landmarks) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    if (!landmarks || landmarks.length === 0) return;
+    
+    const poseLandmarks = landmarks[0]; // 첫 번째 사람만
+    
+    // 뼈대 선 그리기 (빨간색)
+    ctx.strokeStyle = '#ff4444';
+    ctx.lineWidth = 3;
+    for (const [startIdx, endIdx] of POSE_CONNECTIONS) {
+        if (startIdx < poseLandmarks.length && endIdx < poseLandmarks.length) {
+            const start = poseLandmarks[startIdx];
+            const end = poseLandmarks[endIdx];
+            
+            // visibility가 낮으면 스킵
+            if (start.visibility < 0.5 || end.visibility < 0.5) continue;
+            
+            ctx.beginPath();
+            ctx.moveTo(start.x * w, start.y * h);
+            ctx.lineTo(end.x * w, end.y * h);
+            ctx.stroke();
+        }
+    }
+    
+    // 관절 점 그리기 (초록색)
+    ctx.fillStyle = '#44ff44';
+    for (const landmark of poseLandmarks) {
+        if (landmark.visibility < 0.5) continue;
+        
+        ctx.beginPath();
+        ctx.arc(landmark.x * w, landmark.y * h, 5, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+};
+
+// 포즈 감지 루프 시작
+window.startPoseDetection = function() {
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('poseCanvas');
+    
+    if (!window.poseDetector || !video || !canvas) {
+        console.error('Pose detector or video/canvas not ready');
+        return;
+    }
+    
+    // 캔버스 크기를 비디오에 맞춤
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    
+    window.isDetecting = true;
+    
+    function detectLoop() {
+        if (!window.isDetecting) return;
+        
+        window.poseDetector.detect(video, (result) => {
+            if (result && result.landmarks) {
+                window.drawLandmarks(canvas, result.landmarks);
+                
+                // 점수 계산을 위해 외부 함수 호출 (나중에 구현)
+                if (typeof window.onPoseDetected === 'function') {
+                    window.onPoseDetected(result);
+                }
+            }
+        });
+        
+        window.animationFrameId = requestAnimationFrame(detectLoop);
+    }
+    
+    detectLoop();
+};
+
+// 포즈 감지 중지
+window.stopPoseDetection = function() {
+    window.isDetecting = false;
+    if (window.animationFrameId) {
+        cancelAnimationFrame(window.animationFrameId);
+        window.animationFrameId = null;
+    }
+};
+
+// 페이지 로드 시 초기화
+document.addEventListener('DOMContentLoaded', async () => {
+    // 약간의 지연 후 모델 로딩 (카메라 초기화 후)
+    setTimeout(async () => {
+        await window.initPoseDetector();
+    }, 500);
+});
+</script>
+
 <div class="workout-container">
   <!-- 상단 헤더 -->
   <header class="workout-header">
@@ -41,13 +176,14 @@
         <video id="videoElement" autoplay playsinline></video>
         <canvas id="poseCanvas"></canvas>
         <div class="camera-overlay" id="cameraOverlay">
-          <p>📷 카메라를 연결 중...</p>
+          <p id="cameraStatus">📷 카메라를 연결 중...</p>
+          <p id="modelStatus" class="muted">🔄 AI 모델 대기 중</p>
         </div>
       </div>
       
       <!-- 카메라 컨트롤 -->
       <div class="camera-actions" id="cameraActions">
-        <button class="primary" id="startBtn" onclick="startWorkout()">
+        <button class="primary" id="startBtn" onclick="startWorkout()" disabled>
           ▶️ 운동 시작
         </button>
       </div>
@@ -185,16 +321,49 @@
 
   // 카메라 초기화
   async function initCamera() {
+    const cameraStatus = document.getElementById('cameraStatus');
     try {
+      // 세로 영상을 위해 높이를 더 크게 요청
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: 640, height: 480 }
+        video: { 
+          facingMode: 'user', 
+          width: { ideal: 480 },
+          height: { ideal: 640 }
+        }
       });
       videoElement.srcObject = stream;
-      cameraOverlay.innerHTML = '<p>✅ 카메라 준비 완료</p><p class="muted">전신이 잘 보이도록 위치를 조정하세요</p>';
-      startBtn.disabled = false;
+      
+      // 비디오가 재생 준비되면 캔버스 크기 설정
+      videoElement.onloadedmetadata = () => {
+        const canvas = document.getElementById('poseCanvas');
+        canvas.width = videoElement.videoWidth;
+        canvas.height = videoElement.videoHeight;
+      };
+      
+      cameraStatus.textContent = '✅ 카메라 준비 완료';
+      cameraOverlay.classList.add('ready');
+      
+      // 모델도 로드되었으면 버튼 활성화
+      checkReadyState();
     } catch (error) {
       console.error('Camera error:', error);
-      cameraOverlay.innerHTML = '<p>❌ 카메라 연결 실패</p><p class="muted">카메라 권한을 확인해주세요</p>';
+      cameraStatus.textContent = '❌ 카메라 연결 실패';
+      document.getElementById('modelStatus').textContent = '카메라 권한을 확인해주세요';
+    }
+  }
+  
+  // 모든 준비가 완료되었는지 확인
+  function checkReadyState() {
+    const cameraReady = videoElement.srcObject !== null;
+    const modelReady = window.poseDetector !== null;
+    
+    if (cameraReady && modelReady) {
+      startBtn.disabled = false;
+      cameraOverlay.innerHTML = '<p style="font-size: 14px; opacity: 0.7;">전신이 잘 보이도록 위치를 조정하세요</p>';
+      cameraOverlay.classList.add('ready');
+    } else if (cameraReady) {
+      // 모델만 기다리는 중
+      setTimeout(checkReadyState, 500);
     }
   }
 
@@ -220,7 +389,7 @@
       state.phase = 'WORKING';
       
       updateStatus('running', '운동 중');
-      cameraOverlay.hidden = true;
+      cameraOverlay.classList.add('hidden');
       startBtn.hidden = true;
       pauseBtn.disabled = false;
       finishBtn.disabled = false;
@@ -228,8 +397,10 @@
       // 타이머 시작
       startTimer();
 
-      // AI 연동 시작 (추후 구현)
-      // startPoseDetection();
+      // 포즈 감지 시작
+      if (window.poseDetector) {
+        window.startPoseDetection();
+      }
 
     } catch (error) {
       console.error('Start error:', error);
@@ -385,6 +556,11 @@
     state.phase = 'FINISHED';
     clearInterval(state.timerInterval);
     clearInterval(state.restInterval);
+    
+    // 포즈 감지 중지
+    if (window.stopPoseDetection) {
+      window.stopPoseDetection();
+    }
 
     try {
       // 세션 종료 API 호출

@@ -227,7 +227,7 @@ const endWorkoutSession = async (req, res, next) => {
                 ended_at: new Date().toISOString(),
                 duration_sec,
                 total_reps,
-                final_score,
+                final_score,  // 클라이언트에서 계산된 최종 점수
                 summary_feedback,
                 detail
             })
@@ -290,6 +290,91 @@ const recordSessionEvent = async (req, res, next) => {
         if (error) throw error;
 
         res.json({ success: true, event });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Rep 이벤트 처리 API (클라이언트에서 계산된 점수 저장)
+const recordRepEvent = async (req, res, next) => {
+    try {
+        const { sessionId } = req.params;
+        const userId = req.user.user_id;
+        const { rep_index, rep_interval_ms, score } = req.body;
+
+        // 세션 소유자 확인
+        const { data: session, error: sessionError } = await supabase
+            .from('workout_session')
+            .select('session_id')
+            .eq('session_id', sessionId)
+            .eq('user_id', userId)
+            .single();
+
+        if (sessionError || !session) {
+            return res.status(404).json({ error: '세션을 찾을 수 없습니다' });
+        }
+
+        // 1. session_event에 rep 이벤트 저장
+        const { data: event, error: eventError } = await supabase
+            .from('session_event')
+            .insert({
+                session_id: sessionId,
+                type: 'rep',
+                payload: {
+                    rep_index,
+                    rep_interval_ms,
+                    score  // 클라이언트에서 계산된 전체 점수 데이터
+                }
+            })
+            .select()
+            .single();
+
+        if (eventError) throw eventError;
+
+        // 2. session_metric_result 업데이트 (각 컴포넌트별 누적)
+        if (score && score.components) {
+            for (const comp of score.components) {
+                if (comp.score === null || !comp.metricId) continue;
+
+                // 기존 데이터 확인
+                const { data: existing } = await supabase
+                    .from('session_metric_result')
+                    .select('score, raw')
+                    .eq('session_id', sessionId)
+                    .eq('metric_id', comp.metricId)
+                    .single();
+
+                if (existing) {
+                    // 기존 값과 평균 계산 (raw에 rep count 저장)
+                    const repCount = (existing.raw || 0) + 1;
+                    const avgScore = Math.round(
+                        ((existing.score * (repCount - 1)) + comp.score) / repCount
+                    );
+
+                    await supabase
+                        .from('session_metric_result')
+                        .update({ score: avgScore, raw: repCount })
+                        .eq('session_id', sessionId)
+                        .eq('metric_id', comp.metricId);
+                } else {
+                    // 새로 삽입
+                    await supabase
+                        .from('session_metric_result')
+                        .insert({
+                            session_id: sessionId,
+                            metric_id: comp.metricId,
+                            score: Math.round(comp.score),
+                            raw: 1  // rep count
+                        });
+                }
+        }
+        }
+
+        res.json({
+            success: true,
+            event_id: event.event_id,
+            rep_index
+        });
     } catch (error) {
         next(error);
     }
@@ -400,6 +485,8 @@ module.exports = {
     endWorkoutSession,
     recordWorkoutSet,
     recordSessionEvent,
+    recordRepEvent,
     getWorkoutResult,
-    getExercises
+    getExercises,
+    getPoseTestPage: (req, res) => res.render('workout/pose-test', { title: 'Pose Test', activeTab: 'workout', layout: 'layouts/workout' })
 };
