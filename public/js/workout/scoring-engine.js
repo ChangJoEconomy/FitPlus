@@ -12,7 +12,7 @@ class ScoringEngine {
   constructor(scoringProfile) {
     this.profile = scoringProfile;
     this.metrics = scoringProfile?.scoring_profile_metric || [];
-    
+
     // 점수 히스토리 (평균 계산용)
     this.scoreHistory = [];
     this.maxHistoryLength = 30; // 최근 30프레임
@@ -41,14 +41,14 @@ class ScoringEngine {
 
       // 메트릭 키에 해당하는 실제 값 추출
       const actualValue = this.getMetricValue(angles, metric.key);
-      
+
       if (actualValue === null) {
         continue; // 해당 각도를 계산할 수 없는 경우 스킵
       }
 
       // 규칙에 따른 점수 계산
       const metricScore = this.evaluateMetric(actualValue, rule, pm.max_score);
-      
+
       breakdown.push({
         metric_id: metric.metric_id,
         key: metric.key,
@@ -58,7 +58,7 @@ class ScoringEngine {
         score: metricScore,
         maxScore: pm.max_score,
         weight: pm.weight,
-        feedback: metricScore < pm.max_score * 0.7 ? 
+        feedback: metricScore < pm.max_score * 0.7 ?
           this.generateFeedback(metric.key, actualValue, rule) : null
       });
 
@@ -66,8 +66,8 @@ class ScoringEngine {
       totalWeight += pm.weight;
     }
 
-    const finalScore = totalWeight > 0 
-      ? Math.round(totalScore / totalWeight) 
+    const finalScore = totalWeight > 0
+      ? Math.round(totalScore / totalWeight)
       : 0;
 
     // 히스토리에 추가
@@ -89,7 +89,7 @@ class ScoringEngine {
    */
   getMetricValue(angles, metricKey) {
     if (!angles) return null;
-    
+
     // metric.key와 angles 프로퍼티 매핑
     const keyMapping = {
       // 무릎 관련
@@ -109,7 +109,7 @@ class ScoringEngine {
         if (left == null || right == null) return left || right || null;
         return (left + right) / 2;
       },
-      
+
       // 엉덩이/힙 관련
       'hip_angle': () => {
         const left = angles.leftHip;
@@ -127,7 +127,7 @@ class ScoringEngine {
         if (left == null || right == null) return left || right || null;
         return (left + right) / 2;
       },
-      
+
       // 팔꿈치 관련
       'elbow_angle': () => {
         const left = angles.leftElbow;
@@ -139,7 +139,7 @@ class ScoringEngine {
       },
       'left_elbow_angle': () => angles.leftElbow,
       'right_elbow_angle': () => angles.rightElbow,
-      
+
       // 어깨 관련
       'shoulder_angle': () => {
         const left = angles.leftShoulder;
@@ -151,12 +151,12 @@ class ScoringEngine {
       },
       'left_shoulder_angle': () => angles.leftShoulder,
       'right_shoulder_angle': () => angles.rightShoulder,
-      
+
       // 척추/상체 관련
       'spine_angle': () => angles.spine,
       'torso_angle': () => angles.spine,
       'back_angle': () => angles.spine,
-      
+
       // 대칭 관련 (좌우 차이값 반환)
       'knee_symmetry': () => {
         const left = angles.leftKnee;
@@ -176,16 +176,16 @@ class ScoringEngine {
         if (left == null || right == null) return null;
         return Math.abs(left - right);
       },
-      
+
       // 정렬 관련
       'knee_alignment': () => angles.kneeAlignment?.isAligned ? 100 : 50,
       'knee_over_toe': () => {
         if (!angles.kneeAlignment) return null;
-        const avg = (Math.abs(angles.kneeAlignment.left || 0) + 
-                    Math.abs(angles.kneeAlignment.right || 0)) / 2;
+        const avg = (Math.abs(angles.kneeAlignment.left || 0) +
+          Math.abs(angles.kneeAlignment.right || 0)) / 2;
         return Math.max(0, 100 - avg * 500); // 정렬 점수로 변환
       },
-      
+
       // 깊이/시간 관련
       'depth': () => {
         // 스쿼트 깊이를 무릎 각도로 환산 (180도=0%, 90도=100%)
@@ -233,17 +233,17 @@ class ScoringEngine {
     if (ruleType === 'symmetry') {
       return this.evaluateSymmetry(value, rule, maxScore);
     }
-    
+
     // 위치 타입
     if (ruleType === 'position') {
       return this.evaluatePosition(value, rule, maxScore);
     }
-    
+
     // 홀드 타입 (자세 유지)
     if (ruleType === 'hold') {
       return this.evaluateHold(value, rule, maxScore);
     }
-    
+
     // 템포 타입
     if (ruleType === 'tempo') {
       return this.evaluateTempo(value, rule, maxScore);
@@ -253,7 +253,7 @@ class ScoringEngine {
     if (rule.ideal_min !== undefined || rule.ideal_max !== undefined) {
       return this.evaluateIdealRange(value, rule, maxScore);
     }
-    
+
     // 기존 range/threshold/optimal 타입도 지원
     switch (ruleType) {
       case 'range':
@@ -290,7 +290,7 @@ class ScoringEngine {
       const ratio = (value - acceptableMin) / (idealMin - acceptableMin);
       return Math.round(maxScore * (0.6 + 0.4 * ratio));
     }
-    
+
     if (value > idealMax && value <= acceptableMax) {
       const ratio = (acceptableMax - value) / (acceptableMax - idealMax);
       return Math.round(maxScore * (0.6 + 0.4 * ratio));
@@ -301,7 +301,7 @@ class ScoringEngine {
       const deficit = acceptableMin - value;
       return Math.max(0, Math.round(maxScore * 0.3 - deficit));
     }
-    
+
     if (value > acceptableMax) {
       const excess = value - acceptableMax;
       return Math.max(0, Math.round(maxScore * 0.3 - excess));
@@ -316,9 +316,9 @@ class ScoringEngine {
    */
   evaluateSymmetry(diffValue, rule, maxScore) {
     const maxDiff = rule.max_diff || 15;
-    
+
     if (diffValue == null) return Math.round(maxScore * 0.7);
-    
+
     if (diffValue <= maxDiff) {
       return maxScore;
     } else {
@@ -346,7 +346,7 @@ class ScoringEngine {
     // 시간 기반은 별도 로직 필요, 여기서는 자세 안정성만 평가
     if (value == null) return Math.round(maxScore * 0.7);
     const threshold = rule.stability_threshold || 10;
-    
+
     if (value <= threshold) {
       return maxScore;
     } else {
@@ -441,7 +441,7 @@ class ScoringEngine {
       const idealMin = rule.ideal_min ?? 90;
       const idealMax = rule.ideal_max ?? 90;
       const midPoint = (idealMin + idealMax) / 2;
-      
+
       if (value < idealMin && rule.feedback_low) {
         return rule.feedback_low;
       }

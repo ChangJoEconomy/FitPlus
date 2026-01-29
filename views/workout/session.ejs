@@ -1,472 +1,492 @@
-<% 
-  const isRoutineMode = mode === 'ROUTINE';
-  const currentExercise = exercise;
-%>
+<% const isRoutineMode=mode==='ROUTINE' ; const currentExercise=exercise; %>
 
-<!-- MediaPipe Pose CDN -->
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+  <!-- MediaPipe Pose CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 
-<!-- FitPlus AI 모듈 -->
-<script src="/js/workout/pose-engine.js"></script>
-<script src="/js/workout/scoring-engine.js"></script>
-<script src="/js/workout/rep-counter.js"></script>
-<script src="/js/workout/session-buffer.js"></script>
+  <!-- FitPlus AI 모듈 -->
+  <script src="/js/workout/pose-engine.js"></script>
+  <script src="/js/workout/scoring-engine.js"></script>
+  <script src="/js/workout/rep-counter.js"></script>
+  <script src="/js/workout/session-buffer.js"></script>
 
-<div class="workout-container">
-  <!-- 상단 헤더 -->
-  <header class="workout-header">
-    <div class="workout-title">
-      <% if (isRoutineMode && routine) { %>
-        <h2><%= routine.name %></h2>
-        <span class="muted">루틴 운동</span>
-      <% } else { %>
-        <h2><%= currentExercise.name %></h2>
-        <span class="muted">자율 운동</span>
-      <% } %>
-    </div>
-    
-    <!-- 상태 표시 -->
-    <div class="status-badges">
-      <span class="status preparing" id="statusBadge">준비 중</span>
-    </div>
-
-    <div class="workout-actions">
-      <button class="ghost" onclick="confirmExit()">✕ 종료</button>
-    </div>
-  </header>
-
-  <!-- 알림 영역 -->
-  <div class="alert-container" id="alertContainer" hidden>
-    <div class="alert">
-      <strong id="alertTitle">자세 알림</strong>
-      <span id="alertMessage">무릎 각도를 더 굽혀주세요</span>
-    </div>
-  </div>
-
-  <div class="workout-main">
-    <!-- 카메라 영역 -->
-    <div class="camera-section">
-      <div class="camera-frame" id="cameraFrame">
-        <video id="videoElement" autoplay playsinline></video>
-        <canvas id="poseCanvas"></canvas>
-        <div class="camera-overlay" id="cameraOverlay">
-          <p>📷 카메라를 연결 중...</p>
-        </div>
-      </div>
-      
-      <!-- 카메라 컨트롤 -->
-      <div class="camera-actions" id="cameraActions">
-        <button class="primary" id="startBtn" onclick="startWorkout()">
-          ▶️ 운동 시작
-        </button>
-      </div>
-    </div>
-
-    <!-- 사이드 패널 -->
-    <aside class="workout-sidebar">
-      <!-- 실시간 점수 -->
-      <div class="card score-card">
-        <div class="score-header">
-          <span class="muted">실시간 점수</span>
-        </div>
-        <div class="score" id="liveScore">--</div>
-        <div class="score-detail" id="scoreBreakdown">
-          <!-- 점수 세부항목이 여기에 표시됨 -->
-        </div>
-      </div>
-
-      <!-- 운동 카운터 -->
-      <div class="card counter-card">
-        <div class="counter-row">
-          <div class="counter-item">
-            <span class="counter-value" id="repCount">0</span>
-            <span class="counter-label">횟수</span>
-          </div>
-          <div class="counter-item">
-            <span class="counter-value" id="setCount">1</span>
-            <span class="counter-label">세트</span>
-          </div>
-        </div>
+  <div class="workout-container">
+    <!-- 상단 헤더 -->
+    <header class="workout-header">
+      <div class="workout-title">
         <% if (isRoutineMode && routine) { %>
-          <div class="progress-card">
-            <span class="muted">루틴 진행</span>
-            <div class="progress">
-              <div class="progress-bar" id="routineProgress" style="width: 0%"></div>
-            </div>
-            <span class="muted" id="routineStep">1 / <%= routine.routine_setup.length %> 운동</span>
+          <h2>
+            <%= routine.name %>
+          </h2>
+          <span class="muted">루틴 운동</span>
+          <% } else { %>
+            <h2>
+              <%= currentExercise.name %>
+            </h2>
+            <span class="muted">자율 운동</span>
+            <% } %>
+      </div>
+
+      <!-- 상태 표시 -->
+      <div class="status-badges">
+        <span class="status preparing" id="statusBadge">준비 중</span>
+      </div>
+
+      <div class="workout-actions">
+        <button class="ghost" onclick="confirmExit()">✕ 종료</button>
+      </div>
+    </header>
+
+    <!-- 알림 영역 -->
+    <div class="alert-container" id="alertContainer" hidden>
+      <div class="alert">
+        <strong id="alertTitle">자세 알림</strong>
+        <span id="alertMessage">무릎 각도를 더 굽혀주세요</span>
+      </div>
+    </div>
+
+    <div class="workout-main">
+      <!-- 카메라 영역 -->
+      <div class="camera-section">
+        <div class="camera-frame" id="cameraFrame">
+          <video id="videoElement" autoplay playsinline></video>
+          <canvas id="poseCanvas"></canvas>
+          <div class="camera-overlay" id="cameraOverlay">
+            <p>📷 카메라를 연결 중...</p>
           </div>
-        <% } %>
-      </div>
-
-      <!-- 타이머 -->
-      <div class="card timer-card">
-        <div class="timer-display">
-          <span class="timer-value" id="timerValue">00:00</span>
-          <span class="timer-label" id="timerLabel">운동 시간</span>
         </div>
-        <div class="rest-timer" id="restTimer" hidden>
-          <span class="rest-value" id="restValue">30</span>
-          <span class="rest-label">휴식 남음</span>
+
+        <!-- 카메라 컨트롤 -->
+        <div class="camera-actions" id="cameraActions">
+          <button class="primary" id="startBtn" onclick="startWorkout()">
+            ▶️ 운동 시작
+          </button>
         </div>
       </div>
 
-      <!-- 컨트롤 버튼 -->
-      <div class="control-row">
-        <button class="ghost full" id="pauseBtn" onclick="togglePause()" disabled>
-          ⏸️ 일시정지
-        </button>
-      </div>
-      <div class="control-row">
-        <button class="primary full" id="finishBtn" onclick="finishWorkout()" disabled>
-          ✅ 운동 종료
-        </button>
-      </div>
-    </aside>
-  </div>
-</div>
+      <!-- 사이드 패널 -->
+      <aside class="workout-sidebar">
+        <!-- 실시간 점수 -->
+        <div class="card score-card">
+          <div class="score-header">
+            <span class="muted">이번 rep 점수</span>
+          </div>
+          <div class="score" id="liveScore">--</div>
+          <div class="score-detail" id="scoreBreakdown">
+            <!-- 점수 세부항목이 여기에 표시됨 -->
+          </div>
+        </div>
 
-<!-- 종료 확인 모달 -->
-<div class="modal" id="exitModal" hidden>
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>운동 종료</h3>
-      <button class="icon" onclick="closeExitModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <p>정말로 운동을 종료하시겠습니까?</p>
-      <p class="muted">현재까지의 기록이 저장됩니다.</p>
-    </div>
-    <div class="modal-actions">
-      <button class="ghost" onclick="closeExitModal()">계속하기</button>
-      <button class="danger" onclick="forceExit()">종료하기</button>
+        <!-- 운동 카운터 -->
+        <div class="card counter-card">
+          <div class="counter-row">
+            <div class="counter-item">
+              <span class="counter-value" id="repCount">0</span>
+              <span class="counter-label">횟수</span>
+            </div>
+            <div class="counter-item">
+              <span class="counter-value" id="setCount">1</span>
+              <span class="counter-label">세트</span>
+            </div>
+          </div>
+          <% if (isRoutineMode && routine) { %>
+            <div class="progress-card">
+              <span class="muted">루틴 진행</span>
+              <div class="progress">
+                <div class="progress-bar" id="routineProgress" style="width: 0%"></div>
+              </div>
+              <span class="muted" id="routineStep">1 / <%= routine.routine_setup.length %> 운동</span>
+            </div>
+            <% } %>
+        </div>
+
+        <!-- 타이머 -->
+        <div class="card timer-card">
+          <div class="timer-display">
+            <span class="timer-value" id="timerValue">00:00</span>
+            <span class="timer-label" id="timerLabel">운동 시간</span>
+          </div>
+          <div class="rest-timer" id="restTimer" hidden>
+            <span class="rest-value" id="restValue">30</span>
+            <span class="rest-label">휴식 남음</span>
+          </div>
+        </div>
+
+        <!-- 컨트롤 버튼 -->
+        <div class="control-row">
+          <button class="ghost full" id="pauseBtn" onclick="togglePause()" disabled>
+            ⏸️ 일시정지
+          </button>
+        </div>
+        <div class="control-row">
+          <button class="primary full" id="finishBtn" onclick="finishWorkout()" disabled>
+            ✅ 운동 종료
+          </button>
+        </div>
+      </aside>
     </div>
   </div>
-</div>
 
-<script>
-  // 운동 데이터
-  const workoutData = {
-    mode: '<%= mode %>',
-    exercise: <%- JSON.stringify(currentExercise) %>,
-    scoringProfile: <%- scoringProfile ? JSON.stringify(scoringProfile) : 'null' %>,
+  <!-- 종료 확인 모달 -->
+  <div class="modal" id="exitModal" hidden>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>운동 종료</h3>
+        <button class="icon" onclick="closeExitModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <p>정말로 운동을 종료하시겠습니까?</p>
+        <p class="muted">현재까지의 기록이 저장됩니다.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost" onclick="closeExitModal()">계속하기</button>
+        <button class="danger" onclick="forceExit()">종료하기</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 운동 데이터
+    const workoutData = {
+      mode: '<%= mode %>',
+      exercise: <%-  JSON.stringify(currentExercise) %>,
+      scoringProfile: <%-  scoringProfile ? JSON.stringify(scoringProfile) : 'null' %>,
     <% if (isRoutineMode) { %>
-    routine: <%- JSON.stringify(routine) %>,
-    routineInstance: <%- JSON.stringify(routineInstance) %>,
+      routine: <%-  JSON.stringify(routine) %>,
+        routineInstance: <%-  JSON.stringify(routineInstance) %>,
     <% } else { %>
-    routine: null,
-    routineInstance: null,
+      routine: null,
+        routineInstance: null,
     <% } %>
   };
 
-  // AI 엔진 인스턴스
-  let poseEngine = null;
-  let scoringEngine = null;
-  let repCounter = null;
-  let sessionBuffer = null;
+    // AI 엔진 인스턴스
+    let poseEngine = null;
+    let scoringEngine = null;
+    let repCounter = null;
+    let sessionBuffer = null;
 
-  // 상태 관리
-  let state = {
-    phase: 'PREPARING', // PREPARING, WORKING, RESTING, PAUSED, FINISHED
-    sessionId: null,
-    currentSet: 1,
-    currentRep: 0,
-    currentStepIndex: 0,
-    totalTime: 0,
-    restTimeLeft: 0,
-    liveScore: 0,
-    isPaused: false,
-    timerInterval: null,
-    restInterval: null,
-    alertCooldown: false,
-    frameLoop: null
-  };
+    // 상태 관리
+    let state = {
+      phase: 'PREPARING', // PREPARING, WORKING, RESTING, PAUSED, FINISHED
+      sessionId: null,
+      currentSet: 1,
+      currentRep: 0,
+      currentStepIndex: 0,
+      totalTime: 0,
+      restTimeLeft: 0,
+      liveScore: 0,
+      isPaused: false,
+      timerInterval: null,
+      restInterval: null,
+      alertCooldown: false,
+      frameLoop: null
+    };
 
-  // DOM 요소
-  const videoElement = document.getElementById('videoElement');
-  const poseCanvas = document.getElementById('poseCanvas');
-  const cameraOverlay = document.getElementById('cameraOverlay');
-  const statusBadge = document.getElementById('statusBadge');
-  const liveScoreEl = document.getElementById('liveScore');
-  const scoreBreakdownEl = document.getElementById('scoreBreakdown');
-  const repCountEl = document.getElementById('repCount');
-  const setCountEl = document.getElementById('setCount');
-  const timerValueEl = document.getElementById('timerValue');
-  const timerLabelEl = document.getElementById('timerLabel');
-  const restTimerEl = document.getElementById('restTimer');
-  const restValueEl = document.getElementById('restValue');
-  const alertContainer = document.getElementById('alertContainer');
-  const alertTitle = document.getElementById('alertTitle');
-  const alertMessage = document.getElementById('alertMessage');
-  const startBtn = document.getElementById('startBtn');
-  const pauseBtn = document.getElementById('pauseBtn');
-  const finishBtn = document.getElementById('finishBtn');
+    // DOM 요소
+    const videoElement = document.getElementById('videoElement');
+    const poseCanvas = document.getElementById('poseCanvas');
+    const cameraOverlay = document.getElementById('cameraOverlay');
+    const statusBadge = document.getElementById('statusBadge');
+    const liveScoreEl = document.getElementById('liveScore');
+    const scoreBreakdownEl = document.getElementById('scoreBreakdown');
+    const repCountEl = document.getElementById('repCount');
+    const setCountEl = document.getElementById('setCount');
+    const timerValueEl = document.getElementById('timerValue');
+    const timerLabelEl = document.getElementById('timerLabel');
+    const restTimerEl = document.getElementById('restTimer');
+    const restValueEl = document.getElementById('restValue');
+    const alertContainer = document.getElementById('alertContainer');
+    const alertTitle = document.getElementById('alertTitle');
+    const alertMessage = document.getElementById('alertMessage');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const finishBtn = document.getElementById('finishBtn');
 
-  // AI 엔진 초기화
-  async function initAIEngines() {
-    try {
-      cameraOverlay.innerHTML = '<p>🤖 AI 엔진 로딩 중...</p>';
-      
-      // 1. PoseEngine 초기화
-      poseEngine = new PoseEngine();
-      await poseEngine.initialize();
-      
-      // 2. ScoringEngine 초기화
-      scoringEngine = new ScoringEngine(workoutData.scoringProfile);
-      
-      // 3. RepCounter 초기화
-      repCounter = new RepCounter(workoutData.exercise.code);
-      repCounter.onRepComplete = handleRepComplete;
-      
-      // 4. PoseEngine 콜백 설정
-      poseEngine.onPoseDetected = handlePoseDetected;
-      
-      console.log('[Session] AI 엔진 초기화 완료');
-      return true;
-    } catch (error) {
-      console.error('[Session] AI 엔진 초기화 실패:', error);
-      cameraOverlay.innerHTML = '<p>❌ AI 엔진 로딩 실패</p><p class="muted">페이지를 새로고침해주세요</p>';
-      return false;
-    }
-  }
-
-  // 카메라 초기화
-  async function initCamera() {
-    try {
-      cameraOverlay.innerHTML = '<p>📷 카메라를 연결 중...</p>';
-      
-      // AI 엔진 먼저 초기화
-      const aiReady = await initAIEngines();
-      if (!aiReady) return;
-      
-      // 카메라 스트림 가져오기
-      // const stream = await navigator.mediaDevices.getUserMedia({
-      //   video: { 
-      //     facingMode: 'user', 
-      //     width: { ideal: 640 }, 
-      //     height: { ideal: 480 } 
-      //   }
-      // });
-      // 디버깅 용으로 화면 캡처로 대체
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { width: 640, height: 480 }
-      });
-      
-      videoElement.srcObject = stream;
-      
-      // 비디오 메타데이터 로드 후 캔버스 크기 설정
-      videoElement.onloadedmetadata = () => {
-        poseCanvas.width = videoElement.videoWidth;
-        poseCanvas.height = videoElement.videoHeight;
-      };
-      
-      cameraOverlay.innerHTML = '<p>✅ 준비 완료</p><p class="muted">전신이 잘 보이도록 위치를 조정하세요</p>';
-      startBtn.disabled = false;
-      
-    } catch (error) {
-      console.error('[Session] 카메라 에러:', error);
-      
-      // 개발용: 화면 캡처로 대체
+    // AI 엔진 초기화
+    async function initAIEngines() {
       try {
+        cameraOverlay.innerHTML = '<p>🤖 AI 엔진 로딩 중...</p>';
+
+        // 1. PoseEngine 초기화
+        poseEngine = new PoseEngine();
+        await poseEngine.initialize();
+
+        // 2. ScoringEngine 초기화
+        scoringEngine = new ScoringEngine(workoutData.scoringProfile);
+
+        // 3. RepCounter 초기화
+        repCounter = new RepCounter(workoutData.exercise.code);
+        repCounter.onRepComplete = handleRepComplete;
+
+        // 4. PoseEngine 콜백 설정
+        poseEngine.onPoseDetected = handlePoseDetected;
+
+        console.log('[Session] AI 엔진 초기화 완료');
+        return true;
+      } catch (error) {
+        console.error('[Session] AI 엔진 초기화 실패:', error);
+        cameraOverlay.innerHTML = '<p>❌ AI 엔진 로딩 실패</p><p class="muted">페이지를 새로고침해주세요</p>';
+        return false;
+      }
+    }
+
+    // 카메라 초기화
+    async function initCamera() {
+      try {
+        cameraOverlay.innerHTML = '<p>📷 카메라를 연결 중...</p>';
+
+        // AI 엔진 먼저 초기화
+        const aiReady = await initAIEngines();
+        if (!aiReady) return;
+
+        // 카메라 스트림 가져오기
+        // const stream = await navigator.mediaDevices.getUserMedia({
+        //   video: { 
+        //     facingMode: 'user', 
+        //     width: { ideal: 640 }, 
+        //     height: { ideal: 480 } 
+        //   }
+        // });
+        // 디버깅 용으로 화면 캡처로 대체
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: { width: 640, height: 480 }
         });
+
         videoElement.srcObject = stream;
+
+        // 비디오 메타데이터 로드 후 캔버스 크기 설정
         videoElement.onloadedmetadata = () => {
           poseCanvas.width = videoElement.videoWidth;
           poseCanvas.height = videoElement.videoHeight;
         };
-        cameraOverlay.innerHTML = '<p>✅ 화면 캡처 모드</p><p class="muted">개발용 모드입니다</p>';
+
+        cameraOverlay.innerHTML = '<p>✅ 준비 완료</p><p class="muted">전신이 잘 보이도록 위치를 조정하세요</p>';
         startBtn.disabled = false;
-      } catch (e) {
-        cameraOverlay.innerHTML = '<p>❌ 카메라 연결 실패</p><p class="muted">카메라 권한을 확인해주세요</p>';
-      }
-    }
-  }
 
-  // 운동 시작
-  async function startWorkout() {
-    try {
-      // 세션 생성 API 호출
-      const response = await fetch('/api/workout/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          exercise_id: workoutData.exercise.exercise_id,
-          scoring_profile_id: workoutData.scoringProfile?.scoring_profile_id,
-          mode: workoutData.mode,
-          routine_instance_id: workoutData.routineInstance?.routine_instance_id
-        })
-      });
+      } catch (error) {
+        console.error('[Session] 카메라 에러:', error);
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
-
-      state.sessionId = data.session.session_id;
-      state.phase = 'WORKING';
-      
-      // SessionBuffer 초기화
-      sessionBuffer = new SessionBuffer(state.sessionId);
-      sessionBuffer.addEvent('SESSION_START', { exercise: workoutData.exercise.code });
-      
-      updateStatus('running', '운동 중');
-      cameraOverlay.hidden = true;
-      startBtn.hidden = true;
-      pauseBtn.disabled = false;
-      finishBtn.disabled = false;
-
-      // 타이머 시작
-      startTimer();
-      
-      // AI 포즈 감지 시작
-      startPoseDetection();
-
-    } catch (error) {
-      console.error('[Session] 시작 에러:', error);
-      alert('운동 시작에 실패했습니다: ' + error.message);
-    }
-  }
-
-  // 포즈 감지 시작
-  function startPoseDetection() {
-    if (!poseEngine) return;
-    
-    poseEngine.start();
-    
-    // 프레임 루프 시작
-    const processFrame = async () => {
-      if (poseEngine && poseEngine.isRunning && !state.isPaused) {
-        await poseEngine.send(videoElement);
-        
-        // 캔버스에 포즈 그리기
-        if (poseEngine.lastResults) {
-          poseEngine.drawPose(poseCanvas, poseEngine.lastResults);
+        // 개발용: 화면 캡처로 대체
+        try {
+          const stream = await navigator.mediaDevices.getDisplayMedia({
+            video: { width: 640, height: 480 }
+          });
+          videoElement.srcObject = stream;
+          videoElement.onloadedmetadata = () => {
+            poseCanvas.width = videoElement.videoWidth;
+            poseCanvas.height = videoElement.videoHeight;
+          };
+          cameraOverlay.innerHTML = '<p>✅ 화면 캡처 모드</p><p class="muted">개발용 모드입니다</p>';
+          startBtn.disabled = false;
+        } catch (e) {
+          cameraOverlay.innerHTML = '<p>❌ 카메라 연결 실패</p><p class="muted">카메라 권한을 확인해주세요</p>';
         }
       }
-      
-      if (state.phase !== 'FINISHED') {
-        state.frameLoop = requestAnimationFrame(processFrame);
+    }
+
+    // 운동 시작
+    async function startWorkout() {
+      try {
+        // 세션 생성 API 호출
+        const response = await fetch('/api/workout/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            exercise_id: workoutData.exercise.exercise_id,
+            scoring_profile_id: workoutData.scoringProfile?.scoring_profile_id,
+            mode: workoutData.mode,
+            routine_instance_id: workoutData.routineInstance?.routine_instance_id
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+
+        state.sessionId = data.session.session_id;
+        state.phase = 'WORKING';
+
+        // SessionBuffer 초기화
+        sessionBuffer = new SessionBuffer(state.sessionId);
+        sessionBuffer.addEvent('SESSION_START', { exercise: workoutData.exercise.code });
+
+        updateStatus('running', '운동 중');
+        cameraOverlay.hidden = true;
+        startBtn.hidden = true;
+        pauseBtn.disabled = false;
+        finishBtn.disabled = false;
+
+        // 타이머 시작
+        startTimer();
+
+        // AI 포즈 감지 시작
+        startPoseDetection();
+
+      } catch (error) {
+        console.error('[Session] 시작 에러:', error);
+        alert('운동 시작에 실패했습니다: ' + error.message);
       }
-    };
-    
-    state.frameLoop = requestAnimationFrame(processFrame);
-    console.log('[Session] 포즈 감지 시작');
-  }
+    }
 
-  // 포즈 감지 결과 처리
-  function handlePoseDetected(poseData) {
-    if (state.phase !== 'WORKING' || state.isPaused) return;
-    
-    const { angles } = poseData;
-    
-    // 디버깅: 각도 출력
-    // console.log('[Session] 각도:', angles);
-    
-    // 1. 점수 계산
-    const scoreResult = scoringEngine.calculate(angles);
-    
-    // 디버깅: 점수 결과
-    if (scoreResult.score > 0) {
-      console.log('[Session] 점수:', scoreResult.score, 'breakdown:', scoreResult.breakdown?.length);
-    }
-    
-    updateScoreDisplay(scoreResult);
-    
-    // 2. 횟수 감지
-    repCounter.update(angles, scoreResult.score);
-    
-    // 3. 세션 버퍼에 저장
-    if (sessionBuffer) {
-      sessionBuffer.addScore(scoreResult);
-    }
-    
-    // 4. 피드백 체크
-    checkFeedback(scoreResult);
-  }
+    // 포즈 감지 시작
+    function startPoseDetection() {
+      if (!poseEngine) return;
 
-  // 횟수 완료 처리
-  function handleRepComplete(repRecord) {
-    state.currentRep = repRecord.repNumber;
-    repCountEl.textContent = state.currentRep;
-    
-    // 버퍼에 기록
-    if (sessionBuffer) {
-      sessionBuffer.addRep(repRecord);
-    }
-    
-    // 루틴 모드 체크
-    if (workoutData.mode === 'ROUTINE' && workoutData.routine) {
-      checkRoutineProgress();
-    }
-    
-    // 시각적 피드백
-    showRepFeedback(repRecord);
-  }
+      poseEngine.start();
 
-  // 점수 표시 업데이트
-  function updateScoreDisplay(scoreResult) {
-    state.liveScore = scoreResult.score;
-    liveScoreEl.textContent = scoreResult.score;
-    
-    // 점수에 따른 색상
-    liveScoreEl.style.background = 'none';
-    liveScoreEl.style.webkitBackgroundClip = 'unset';
-    liveScoreEl.style.webkitTextFillColor = 'unset';
-    
-    if (scoreResult.score >= 80) {
-      liveScoreEl.style.color = '#22c55e';
-    } else if (scoreResult.score >= 60) {
-      liveScoreEl.style.color = '#eab308';
-    } else if (scoreResult.score > 0) {
-      liveScoreEl.style.color = '#ef4444';
-    } else {
-      liveScoreEl.style.color = '#94a3b8';
+      // 프레임 루프 시작
+      const processFrame = async () => {
+        if (poseEngine && poseEngine.isRunning && !state.isPaused) {
+          await poseEngine.send(videoElement);
+
+          // 캔버스에 포즈 그리기
+          if (poseEngine.lastResults) {
+            poseEngine.drawPose(poseCanvas, poseEngine.lastResults);
+          }
+        }
+
+        if (state.phase !== 'FINISHED') {
+          state.frameLoop = requestAnimationFrame(processFrame);
+        }
+      };
+
+      state.frameLoop = requestAnimationFrame(processFrame);
+      console.log('[Session] 포즈 감지 시작');
     }
-    
-    // 세부 점수 표시
-    if (scoreResult.breakdown && scoreResult.breakdown.length > 0) {
-      scoreBreakdownEl.innerHTML = scoreResult.breakdown
-        .slice(0, 3) // 상위 3개만 표시
-        .map(item => `
+
+    // 포즈 감지 결과 처리
+    function handlePoseDetected(poseData) {
+      if (state.phase !== 'WORKING' || state.isPaused) return;
+
+      const { angles } = poseData;
+
+      // 디버깅: 각도 출력
+      // console.log('[Session] 각도:', angles);
+
+      // 1. 점수 계산
+      const scoreResult = scoringEngine.calculate(angles);
+
+      // 디버깅: 점수 결과
+      if (scoreResult.score > 0) {
+        console.log('[Session] 점수:', scoreResult.score, 'breakdown:', scoreResult.breakdown?.length);
+      }
+
+      // 2. 횟수 감지 (rep 상태/점수 집계를 위해 먼저 업데이트)
+      repCounter.update(angles, scoreResult.score);
+
+      updateScoreDisplay(scoreResult);
+
+      // 3. 세션 버퍼에 저장
+      if (sessionBuffer) {
+        sessionBuffer.addScore(scoreResult);
+      }
+
+      // 4. 피드백 체크
+      const shouldCheckFeedback = repCounter?.pattern?.isTimeBased ? true : repCounter?.isInProgress();
+      if (shouldCheckFeedback) {
+        checkFeedback(scoreResult);
+      }
+    }
+
+    // 횟수 완료 처리
+    function handleRepComplete(repRecord) {
+      state.currentRep = repRecord.repNumber;
+      repCountEl.textContent = state.currentRep;
+
+      // 버퍼에 기록
+      if (sessionBuffer) {
+        sessionBuffer.addRep(repRecord);
+      }
+
+      // 루틴 모드 체크
+      if (workoutData.mode === 'ROUTINE' && workoutData.routine) {
+        checkRoutineProgress();
+      }
+
+      // 시각적 피드백
+      showRepFeedback(repRecord);
+    }
+
+    // 점수 표시 업데이트
+    function updateScoreDisplay(scoreResult) {
+      const isTimeBased = repCounter?.pattern?.isTimeBased;
+      const hasAnyRep = repCounter?.getCount ? repCounter.getCount() > 0 : false;
+      const isRepInProgress = repCounter?.isInProgress ? repCounter.isInProgress() : false;
+
+      // rep 기반 운동: ACTIVE 구간 기반 rep 점수를 표시 (첫 rep 전에는 --)
+      const displayScore = isTimeBased
+        ? scoreResult.score
+        : (hasAnyRep || isRepInProgress) && repCounter?.getCurrentRepScore
+          ? repCounter.getCurrentRepScore()
+          : 0;
+
+      state.liveScore = displayScore;
+      liveScoreEl.textContent = (!isTimeBased && !hasAnyRep && !isRepInProgress) ? '--' : displayScore;
+
+      // 점수에 따른 색상
+      liveScoreEl.style.background = 'none';
+      liveScoreEl.style.webkitBackgroundClip = 'unset';
+      liveScoreEl.style.webkitTextFillColor = 'unset';
+
+      if (displayScore >= 80) {
+        liveScoreEl.style.color = '#22c55e';
+      } else if (displayScore >= 60) {
+        liveScoreEl.style.color = '#eab308';
+      } else if (displayScore > 0) {
+        liveScoreEl.style.color = '#ef4444';
+      } else {
+        liveScoreEl.style.color = '#94a3b8';
+      }
+
+      // 세부 점수 표시
+      const shouldShowBreakdown = scoreResult.breakdown && scoreResult.breakdown.length > 0 &&
+        (isTimeBased || isRepInProgress);
+
+      if (shouldShowBreakdown) {
+        scoreBreakdownEl.innerHTML = scoreResult.breakdown
+          .slice(0, 3) // 상위 3개만 표시
+          .map(item => `
           <div class="score-item">
             <span>${item.title || item.key}</span>
             <span>${Math.round(item.score)}/${item.maxScore}</span>
           </div>
         `).join('');
-    } else if (scoreResult.score === 0) {
-      scoreBreakdownEl.innerHTML = '<div class="score-item"><span class="muted">포즈 감지 중...</span></div>';
+      } else if (scoreResult.score === 0) {
+        scoreBreakdownEl.innerHTML = '<div class="score-item"><span class="muted">포즈 감지 중...</span></div>';
+      } else if (!isTimeBased && !isRepInProgress) {
+        scoreBreakdownEl.innerHTML = '<div class="score-item"><span class="muted">rep 시작하면 표시됩니다</span></div>';
+      }
     }
-  }
 
-  // 피드백 체크
-  function checkFeedback(scoreResult) {
-    if (state.alertCooldown) return;
-    
-    // 점수가 낮은 항목 찾기
-    const lowScoreItem = scoreResult.breakdown?.find(
-      item => item.feedback && item.score < item.maxScore * 0.6
-    );
-    
-    if (lowScoreItem) {
-      showAlert('자세 교정 필요', lowScoreItem.feedback);
+    // 피드백 체크
+    function checkFeedback(scoreResult) {
+      if (state.alertCooldown) return;
+
+      // 점수가 낮은 항목 찾기
+      const lowScoreItem = scoreResult.breakdown?.find(
+        item => item.feedback && item.score < item.maxScore * 0.6
+      );
+
+      if (lowScoreItem) {
+        showAlert('자세 교정 필요', lowScoreItem.feedback);
+      }
     }
-  }
 
-  // 횟수 완료 피드백
-  function showRepFeedback(repRecord) {
-    const msg = repRecord.score >= 80 ? '완벽해요! 👏' :
-                repRecord.score >= 60 ? '좋아요! 👍' : '계속 해보세요!';
-    
-    // 잠깐 표시되는 토스트 메시지
-    showToast(`${repRecord.repNumber}회 ${msg}`);
-  }
+    // 횟수 완료 피드백
+    function showRepFeedback(repRecord) {
+      const msg = repRecord.score >= 80 ? '완벽해요! 👏' :
+        repRecord.score >= 60 ? '좋아요! 👍' : '계속 해보세요!';
 
-  // 토스트 메시지
-  function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = message;
-    toast.style.cssText = `
+      // 잠깐 표시되는 토스트 메시지
+      showToast(`${repRecord.repNumber}회 ${msg}`);
+    }
+
+    // 토스트 메시지
+    function showToast(message) {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = message;
+      toast.style.cssText = `
       position: fixed;
       bottom: 100px;
       left: 50%;
@@ -478,280 +498,295 @@
       z-index: 1000;
       animation: fadeInOut 2s ease;
     `;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2000);
-  }
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2000);
+    }
 
-  // 루틴 진행도 체크
-  function checkRoutineProgress() {
-    const currentStep = workoutData.routine.routine_setup[state.currentStepIndex];
-    if (!currentStep) return;
-    
-    // 목표 횟수 달성
-    if (currentStep.target_type === 'REPS' && state.currentRep >= currentStep.target_value) {
-      if (state.currentSet < currentStep.sets) {
-        // 세트 완료, 휴식 시작
-        if (sessionBuffer) {
-          sessionBuffer.completeSet(currentStep.rest_sec);
+    // 루틴 진행도 체크
+    function checkRoutineProgress() {
+      const currentStep = workoutData.routine.routine_setup[state.currentStepIndex];
+      if (!currentStep) return;
+
+      // 목표 횟수 달성
+      if (currentStep.target_type === 'REPS' && state.currentRep >= currentStep.target_value) {
+        if (state.currentSet < currentStep.sets) {
+          // 세트 완료, 휴식 시작
+          if (sessionBuffer) {
+            sessionBuffer.completeSet(currentStep.rest_sec);
+          }
+          startRest(currentStep.rest_sec);
+        } else {
+          // 다음 운동으로
+          nextExercise();
         }
-        startRest(currentStep.rest_sec);
+      }
+    }
+
+    // 타이머 시작
+    function startTimer() {
+      state.timerInterval = setInterval(() => {
+        if (!state.isPaused && state.phase === 'WORKING') {
+          state.totalTime++;
+          updateTimerDisplay();
+        }
+      }, 1000);
+    }
+
+    // 타이머 표시 업데이트
+    function updateTimerDisplay() {
+      const mins = Math.floor(state.totalTime / 60);
+      const secs = state.totalTime % 60;
+      timerValueEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    // 상태 업데이트
+    function updateStatus(className, text) {
+      statusBadge.className = 'status ' + className;
+      statusBadge.textContent = text;
+    }
+
+    // 일시정지 토글
+    function togglePause() {
+      state.isPaused = !state.isPaused;
+
+      if (state.isPaused) {
+        state.phase = 'PAUSED';
+        updateStatus('paused', '일시정지');
+        pauseBtn.innerHTML = '▶️ 계속하기';
+        if (poseEngine) poseEngine.stop();
+        if (sessionBuffer) sessionBuffer.addEvent('PAUSE');
       } else {
-        // 다음 운동으로
-        nextExercise();
+        state.phase = 'WORKING';
+        updateStatus('running', '운동 중');
+        pauseBtn.innerHTML = '⏸️ 일시정지';
+        if (poseEngine) poseEngine.start();
+        if (sessionBuffer) sessionBuffer.addEvent('RESUME');
       }
     }
-  }
 
-  // 타이머 시작
-  function startTimer() {
-    state.timerInterval = setInterval(() => {
-      if (!state.isPaused && state.phase === 'WORKING') {
-        state.totalTime++;
-        updateTimerDisplay();
-      }
-    }, 1000);
-  }
+    // 휴식 시작
+    function startRest(seconds) {
+      state.phase = 'RESTING';
+      state.restTimeLeft = seconds;
+      updateStatus('rest', '휴식 중');
+      timerLabelEl.textContent = '휴식 시간';
+      restTimerEl.hidden = false;
+      restValueEl.textContent = seconds;
 
-  // 타이머 표시 업데이트
-  function updateTimerDisplay() {
-    const mins = Math.floor(state.totalTime / 60);
-    const secs = state.totalTime % 60;
-    timerValueEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  }
-
-  // 상태 업데이트
-  function updateStatus(className, text) {
-    statusBadge.className = 'status ' + className;
-    statusBadge.textContent = text;
-  }
-
-  // 일시정지 토글
-  function togglePause() {
-    state.isPaused = !state.isPaused;
-    
-    if (state.isPaused) {
-      state.phase = 'PAUSED';
-      updateStatus('paused', '일시정지');
-      pauseBtn.innerHTML = '▶️ 계속하기';
       if (poseEngine) poseEngine.stop();
-      if (sessionBuffer) sessionBuffer.addEvent('PAUSE');
-    } else {
-      state.phase = 'WORKING';
-      updateStatus('running', '운동 중');
-      pauseBtn.innerHTML = '⏸️ 일시정지';
-      if (poseEngine) poseEngine.start();
-      if (sessionBuffer) sessionBuffer.addEvent('RESUME');
-    }
-  }
+      if (sessionBuffer) sessionBuffer.addEvent('REST_START', { duration: seconds });
 
-  // 휴식 시작
-  function startRest(seconds) {
-    state.phase = 'RESTING';
-    state.restTimeLeft = seconds;
-    updateStatus('rest', '휴식 중');
-    timerLabelEl.textContent = '휴식 시간';
-    restTimerEl.hidden = false;
-    restValueEl.textContent = seconds;
-    
-    if (poseEngine) poseEngine.stop();
-    if (sessionBuffer) sessionBuffer.addEvent('REST_START', { duration: seconds });
+      state.restInterval = setInterval(() => {
+        if (!state.isPaused) {
+          state.restTimeLeft--;
+          restValueEl.textContent = state.restTimeLeft;
 
-    state.restInterval = setInterval(() => {
-      if (!state.isPaused) {
-        state.restTimeLeft--;
-        restValueEl.textContent = state.restTimeLeft;
-
-        if (state.restTimeLeft <= 0) {
-          endRest();
+          if (state.restTimeLeft <= 0) {
+            endRest();
+          }
         }
+      }, 1000);
+    }
+
+    // 휴식 종료
+    function endRest() {
+      clearInterval(state.restInterval);
+      restTimerEl.hidden = true;
+      state.phase = 'WORKING';
+      timerLabelEl.textContent = '운동 시간';
+      updateStatus('running', '운동 중');
+
+      // 다음 세트 준비
+      state.currentSet++;
+      setCountEl.textContent = state.currentSet;
+      state.currentRep = 0;
+      repCountEl.textContent = 0;
+
+      // RepCounter 리셋 (횟수만)
+      if (repCounter) {
+        repCounter.repCount = 0;
       }
-    }, 1000);
-  }
 
-  // 휴식 종료
-  function endRest() {
-    clearInterval(state.restInterval);
-    restTimerEl.hidden = true;
-    state.phase = 'WORKING';
-    timerLabelEl.textContent = '운동 시간';
-    updateStatus('running', '운동 중');
-    
-    // 다음 세트 준비
-    state.currentSet++;
-    setCountEl.textContent = state.currentSet;
-    state.currentRep = 0;
-    repCountEl.textContent = 0;
-    
-    // RepCounter 리셋 (횟수만)
-    if (repCounter) {
-      repCounter.repCount = 0;
-    }
-    
-    if (poseEngine) poseEngine.start();
-    if (sessionBuffer) sessionBuffer.addEvent('REST_END');
-    
-    showAlert('다음 세트', `${state.currentSet}세트 시작!`);
-  }
+      if (poseEngine) poseEngine.start();
+      if (sessionBuffer) sessionBuffer.addEvent('REST_END');
 
-  // 알림 표시
-  function showAlert(title, message) {
-    if (state.alertCooldown) return;
-
-    alertTitle.textContent = title;
-    alertMessage.textContent = message;
-    alertContainer.hidden = false;
-
-    state.alertCooldown = true;
-    setTimeout(() => {
-      alertContainer.hidden = true;
-      state.alertCooldown = false;
-    }, 3000);
-  }
-
-  // 다음 운동으로 (루틴 모드)
-  function nextExercise() {
-    state.currentStepIndex++;
-    const routineSteps = workoutData.routine.routine_setup;
-
-    if (state.currentStepIndex >= routineSteps.length) {
-      finishWorkout();
-      return;
+      showAlert('다음 세트', `${state.currentSet}세트 시작!`);
     }
 
-    // 진행률 업데이트
-    const progress = (state.currentStepIndex / routineSteps.length) * 100;
-    document.getElementById('routineProgress').style.width = `${progress}%`;
-    document.getElementById('routineStep').textContent = 
-      `${state.currentStepIndex + 1} / ${routineSteps.length} 운동`;
+    // 알림 표시
+    function showAlert(title, message) {
+      if (state.alertCooldown) return;
 
-    // 상태 리셋
-    state.currentSet = 1;
-    state.currentRep = 0;
-    setCountEl.textContent = 1;
-    repCountEl.textContent = 0;
-    
-    if (repCounter) repCounter.reset();
-    if (sessionBuffer) sessionBuffer.addEvent('NEXT_EXERCISE', { 
-      stepIndex: state.currentStepIndex 
-    });
-    
-    showAlert('다음 운동', routineSteps[state.currentStepIndex].exercise?.name || '다음 운동');
-  }
+      alertTitle.textContent = title;
+      alertMessage.textContent = message;
+      alertContainer.hidden = false;
 
-  // 운동 종료
-  async function finishWorkout() {
-    state.phase = 'FINISHED';
-    
-    // 리소스 정리
-    clearInterval(state.timerInterval);
-    clearInterval(state.restInterval);
-    if (state.frameLoop) {
-      cancelAnimationFrame(state.frameLoop);
+      state.alertCooldown = true;
+      setTimeout(() => {
+        alertContainer.hidden = true;
+        state.alertCooldown = false;
+      }, 3000);
     }
-    if (poseEngine) {
-      poseEngine.destroy();
-    }
-    
-    updateStatus('finished', '완료');
 
-    try {
-      // 세션 버퍼에서 데이터 추출
-      const sessionData = sessionBuffer ? sessionBuffer.export() : {
-        duration_sec: state.totalTime,
-        total_reps: state.currentRep,
-        final_score: state.liveScore || 0,
-        summary_feedback: generateSummary()
-      };
-      
-      // 세션 종료 API 호출
-      const response = await fetch(`/api/workout/session/${state.sessionId}/end`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sessionData)
+    // 다음 운동으로 (루틴 모드)
+    function nextExercise() {
+      state.currentStepIndex++;
+      const routineSteps = workoutData.routine.routine_setup;
+
+      if (state.currentStepIndex >= routineSteps.length) {
+        finishWorkout();
+        return;
+      }
+
+      // 진행률 업데이트
+      const progress = (state.currentStepIndex / routineSteps.length) * 100;
+      document.getElementById('routineProgress').style.width = `${progress}%`;
+      document.getElementById('routineStep').textContent =
+        `${state.currentStepIndex + 1} / ${routineSteps.length} 운동`;
+
+      // 상태 리셋
+      state.currentSet = 1;
+      state.currentRep = 0;
+      setCountEl.textContent = 1;
+      repCountEl.textContent = 0;
+
+      if (repCounter) repCounter.reset();
+      if (sessionBuffer) sessionBuffer.addEvent('NEXT_EXERCISE', {
+        stepIndex: state.currentStepIndex
       });
 
-      if (response.ok) {
-        // 로컬 스토리지 정리
-        if (sessionBuffer) sessionBuffer.clearStorage();
-        window.location.href = `/workout/result/${state.sessionId}`;
-      } else {
-        throw new Error('세션 종료 실패');
+      showAlert('다음 운동', routineSteps[state.currentStepIndex].exercise?.name || '다음 운동');
+    }
+
+    // 운동 종료
+    async function finishWorkout() {
+      state.phase = 'FINISHED';
+
+      // 리소스 정리
+      clearInterval(state.timerInterval);
+      clearInterval(state.restInterval);
+      if (state.frameLoop) {
+        cancelAnimationFrame(state.frameLoop);
       }
-    } catch (error) {
-      console.error('[Session] 종료 에러:', error);
-      // 실패해도 결과 페이지로 이동 시도
-      window.location.href = `/workout/result/${state.sessionId}`;
+      if (poseEngine) {
+        poseEngine.destroy();
+      }
+
+      updateStatus('finished', '완료');
+
+      try {
+        // 세션 버퍼에서 데이터 추출
+        const sessionData = sessionBuffer ? sessionBuffer.export() : {
+          duration_sec: state.totalTime,
+          total_reps: state.currentRep,
+          final_score: state.liveScore || 0,
+          summary_feedback: generateSummary()
+        };
+
+        // 세션 종료 API 호출
+        const response = await fetch(`/api/workout/session/${state.sessionId}/end`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sessionData)
+        });
+
+        if (response.ok) {
+          // 로컬 스토리지 정리
+          if (sessionBuffer) sessionBuffer.clearStorage();
+          window.location.href = `/workout/result/${state.sessionId}`;
+        } else {
+          throw new Error('세션 종료 실패');
+        }
+      } catch (error) {
+        console.error('[Session] 종료 에러:', error);
+        // 실패해도 결과 페이지로 이동 시도
+        window.location.href = `/workout/result/${state.sessionId}`;
+      }
     }
-  }
 
-  // 요약 생성 (fallback)
-  function generateSummary() {
-    if (state.liveScore >= 80) {
-      return '훌륭해요! 자세가 매우 좋습니다.';
-    } else if (state.liveScore >= 60) {
-      return '좋아요! 조금만 더 신경쓰면 완벽해요.';
-    } else {
-      return '자세 교정이 필요합니다. 운동 배우기를 확인해보세요.';
+    // 요약 생성 (fallback)
+    function generateSummary() {
+      if (state.liveScore >= 80) {
+        return '훌륭해요! 자세가 매우 좋습니다.';
+      } else if (state.liveScore >= 60) {
+        return '좋아요! 조금만 더 신경쓰면 완벽해요.';
+      } else {
+        return '자세 교정이 필요합니다. 운동 배우기를 확인해보세요.';
+      }
     }
-  }
 
-  // 종료 확인
-  function confirmExit() {
-    if (state.phase === 'PREPARING') {
-      window.location.href = workoutData.mode === 'ROUTINE' ? '/routine' : '/workout/free';
-    } else {
-      document.getElementById('exitModal').hidden = false;
+    // 종료 확인
+    function confirmExit() {
+      if (state.phase === 'PREPARING') {
+        window.location.href = workoutData.mode === 'ROUTINE' ? '/routine' : '/workout/free';
+      } else {
+        document.getElementById('exitModal').hidden = false;
+      }
     }
-  }
 
-  function closeExitModal() {
-    document.getElementById('exitModal').hidden = true;
-  }
-
-  function forceExit() {
-    finishWorkout();
-  }
-
-  // 페이지 언로드 시 정리
-  window.addEventListener('beforeunload', (e) => {
-    if (state.phase === 'WORKING' || state.phase === 'RESTING' || state.phase === 'PAUSED') {
-      // 데이터 백업
-      if (sessionBuffer) sessionBuffer.saveToStorage();
-      e.preventDefault();
-      e.returnValue = '';
+    function closeExitModal() {
+      document.getElementById('exitModal').hidden = true;
     }
-  });
 
-  // 초기화
-  document.addEventListener('DOMContentLoaded', () => {
-    initCamera();
-  });
-</script>
+    function forceExit() {
+      finishWorkout();
+    }
 
-<style>
-  @keyframes fadeInOut {
-    0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
-    15% { opacity: 1; transform: translateX(-50%) translateY(0); }
-    85% { opacity: 1; transform: translateX(-50%) translateY(0); }
-    100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-  }
-  
-  #poseCanvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-  }
-  
-  .score-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
-    font-size: 12px;
-    margin-top: 4px;
-  }
-</style>
+    // 페이지 언로드 시 정리
+    window.addEventListener('beforeunload', (e) => {
+      if (state.phase === 'WORKING' || state.phase === 'RESTING' || state.phase === 'PAUSED') {
+        // 데이터 백업
+        if (sessionBuffer) sessionBuffer.saveToStorage();
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+
+    // 초기화
+    document.addEventListener('DOMContentLoaded', () => {
+      initCamera();
+    });
+  </script>
+
+  <style>
+    @keyframes fadeInOut {
+      0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+      }
+
+      15% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      85% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+      }
+    }
+
+    #poseCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .score-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+  </style>

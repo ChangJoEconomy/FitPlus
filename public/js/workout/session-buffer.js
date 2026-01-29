@@ -181,8 +181,13 @@ class SessionBuffer {
    * 최종 점수 계산
    */
   calculateFinalScore() {
+    // rep 기반 운동은 rep 점수 평균을 우선 사용 (스쿼트처럼 중립 구간에서 점수가 떨어지는 문제 방지)
+    if (this.repRecords.length > 0) {
+      return this.calculateAvgRepScore();
+    }
+
     if (this.scoreTimeline.length === 0) return 0;
-    
+
     const scores = this.scoreTimeline.map(s => s.score);
     const sum = scores.reduce((a, b) => a + b, 0);
     return Math.round(sum / scores.length);

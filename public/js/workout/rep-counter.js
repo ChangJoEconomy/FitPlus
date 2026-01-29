@@ -15,21 +15,27 @@ class RepCounter {
    * @param {string} exerciseCode - 운동 코드 (squat, pushup, lunge 등)
    */
   constructor(exerciseCode) {
-    this.exerciseCode = exerciseCode;
-    this.pattern = this.getExercisePattern(exerciseCode);
-    
+    this.exerciseCode = (exerciseCode || '').toString();
+    this.pattern = this.getExercisePattern(this.exerciseCode);
+
     // 상태
     this.currentState = REP_STATES.NEUTRAL;
     this.repCount = 0;
-    this.lastRepTime = 0;
+    this.lastRepTime = performance.now(); // 마지막 rep 종료 시각 (ms)
     this.stateHistory = [];
     this.maxHistoryLength = 10;
 
     // 횟수별 기록
     this.repRecords = [];
 
-    // 임시 점수 버퍼 (현재 동작의 점수)
-    this.currentRepScores = [];
+    // 현재 rep 상태/점수 누적
+    this.repStartTime = null;
+    this.hadActive = false;
+    this.activeStateEnterTime = null;
+    this.activeTimeMs = 0;
+    this.currentRepScores = [];     // ACTIVE 구간 점수
+    this.currentRepAllScores = [];  // TRANSITION+ACTIVE 점수 (fallback)
+    this.lastCompletedRepScore = 0;
 
     // 콜백
     this.onRepComplete = null;
@@ -42,6 +48,17 @@ class RepCounter {
    * 각 운동의 상태 전이 규칙 정의
    */
   getExercisePattern(code) {
+    const normalized = (code || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/-/g, '_');
+
+    const aliases = {
+      pushup: 'push_up'
+    };
+    const key = aliases[normalized] || normalized;
+
     const patterns = {
       // 스쿼트: 서있음 → 앉음 → 서있음 = 1회
       'squat': {
@@ -139,7 +156,7 @@ class RepCounter {
     };
 
     // 기본 패턴 (스쿼트 기반)
-    return patterns[code] || patterns['squat'];
+    return patterns[key] || patterns['squat'];
   }
 
   /**
@@ -177,14 +194,38 @@ class RepCounter {
 
     this.currentState = newState;
 
-    // 점수 버퍼에 추가
-    if (newState !== REP_STATES.NEUTRAL) {
-      this.currentRepScores.push(currentScore);
+    // rep 시작 감지 (NEUTRAL -> 비NEUTRAL)
+    if (prevState === REP_STATES.NEUTRAL && newState !== REP_STATES.NEUTRAL) {
+      this.repStartTime = now;
+      this.hadActive = false;
+      this.activeStateEnterTime = null;
+      this.activeTimeMs = 0;
+      this.currentRepScores = [];
+      this.currentRepAllScores = [];
+    }
+
+    // ACTIVE 체류 시간 누적
+    if (prevState !== REP_STATES.ACTIVE && newState === REP_STATES.ACTIVE) {
+      this.hadActive = true;
+      this.activeStateEnterTime = now;
+    } else if (prevState === REP_STATES.ACTIVE && newState !== REP_STATES.ACTIVE) {
+      if (this.activeStateEnterTime != null) {
+        this.activeTimeMs += (now - this.activeStateEnterTime);
+        this.activeStateEnterTime = null;
+      }
+    }
+
+    // 점수 버퍼링: TRANSITION/ACTIVE는 기록하되, rep 점수는 ACTIVE만 반영
+    if (this.repStartTime != null && newState !== REP_STATES.NEUTRAL) {
+      this.currentRepAllScores.push(currentScore);
+      if (newState === REP_STATES.ACTIVE) {
+        this.currentRepScores.push(currentScore);
+      }
     }
 
     // 횟수 완료 체크
     const repCompleted = this.checkRepCompletion(now);
-    
+
     if (repCompleted) {
       return this.completeRep(now);
     }
@@ -225,35 +266,32 @@ class RepCounter {
    * 패턴: NEUTRAL → ACTIVE → NEUTRAL
    */
   checkRepCompletion(now) {
-    if (this.stateHistory.length < 2) return false;
+    if (this.repStartTime == null) return false;
 
-    const recent = this.stateHistory.slice(-3);
-    
-    // NEUTRAL → ACTIVE → NEUTRAL 패턴 찾기
-    let foundActive = false;
-    let lastActiveTime = 0;
-    let firstNeutralTime = 0;
-
-    for (const entry of this.stateHistory) {
-      if (entry.to === REP_STATES.ACTIVE && !foundActive) {
-        foundActive = true;
-        lastActiveTime = entry.timestamp;
-      }
-      if (entry.to === REP_STATES.NEUTRAL && !firstNeutralTime) {
-        firstNeutralTime = entry.timestamp;
-      }
+    // ACTIVE 상태가 끝나지 않은 채로 NEUTRAL로 들어온 경우, activeTimeMs 보정
+    if (this.currentState === REP_STATES.NEUTRAL && this.activeStateEnterTime != null) {
+      this.activeTimeMs += (now - this.activeStateEnterTime);
+      this.activeStateEnterTime = null;
     }
 
-    // 현재 NEUTRAL이고, ACTIVE를 거쳐왔는지 확인
-    if (this.currentState === REP_STATES.NEUTRAL && foundActive) {
-      // 최소 시간 체크
-      const elapsed = now - this.lastRepTime;
-      if (elapsed >= this.pattern.minDuration) {
-        return true;
-      }
+    // ACTIVE 없이 다시 NEUTRAL로 돌아오면 rep 취소
+    if (this.currentState === REP_STATES.NEUTRAL && !this.hadActive) {
+      this.repStartTime = null;
+      this.currentRepScores = [];
+      this.currentRepAllScores = [];
+      this.activeTimeMs = 0;
+      return false;
     }
 
-    return false;
+    if (this.currentState !== REP_STATES.NEUTRAL || !this.hadActive) return false;
+
+    const repDuration = now - this.repStartTime;
+    if (repDuration < (this.pattern.minDuration || 0)) return false;
+
+    const minActiveTime = this.pattern.minActiveTime || 0;
+    if (this.activeTimeMs < minActiveTime) return false;
+
+    return true;
   }
 
   /**
@@ -261,17 +299,17 @@ class RepCounter {
    */
   completeRep(now) {
     this.repCount++;
-    const duration = now - this.lastRepTime;
+    const duration = this.repStartTime != null ? (now - this.repStartTime) : (now - this.lastRepTime);
     this.lastRepTime = now;
 
-    // 이번 동작의 평균 점수 계산
-    const avgScore = this.currentRepScores.length > 0
-      ? Math.round(this.currentRepScores.reduce((a, b) => a + b, 0) / this.currentRepScores.length)
-      : 0;
+    // 이번 동작의 점수 계산: ACTIVE 구간 점수 우선, 없으면 전체 구간 fallback
+    const scoreSamples = this.currentRepScores.length > 0 ? this.currentRepScores : this.currentRepAllScores;
+    const repScore = this.aggregateScores(scoreSamples);
+    this.lastCompletedRepScore = repScore;
 
     const repRecord = {
       repNumber: this.repCount,
-      score: avgScore,
+      score: repScore,
       duration: Math.round(duration),
       timestamp: Date.now()
     };
@@ -280,16 +318,57 @@ class RepCounter {
 
     // 상태 리셋
     this.stateHistory = [];
+    this.repStartTime = null;
+    this.hadActive = false;
+    this.activeStateEnterTime = null;
+    this.activeTimeMs = 0;
     this.currentRepScores = [];
+    this.currentRepAllScores = [];
 
     // 콜백 호출
     if (this.onRepComplete) {
       this.onRepComplete(repRecord);
     }
 
-    console.log(`[RepCounter] 횟수 완료: ${this.repCount}회, 점수: ${avgScore}`);
+    console.log(`[RepCounter] 횟수 완료: ${this.repCount}회, 점수: ${repScore}`);
 
     return repRecord;
+  }
+
+  /**
+   * 현재 rep 진행 중인지 여부
+   */
+  isInProgress() {
+    if (this.pattern.isTimeBased) return false;
+    return this.repStartTime != null;
+  }
+
+  /**
+   * 현재 rep 점수(진행 중이면 누적, 아니면 직전 rep 점수)
+   */
+  getCurrentRepScore() {
+    if (this.pattern.isTimeBased) return 0;
+    if (!this.isInProgress()) return this.lastCompletedRepScore || 0;
+
+    const scoreSamples = this.currentRepScores.length > 0 ? this.currentRepScores : this.currentRepAllScores;
+    return this.aggregateScores(scoreSamples);
+  }
+
+  /**
+   * 점수 샘플을 안정적으로 집계 (trimmed mean)
+   */
+  aggregateScores(scores) {
+    if (!scores || scores.length === 0) return 0;
+    const sorted = scores
+      .filter(s => typeof s === 'number' && !Number.isNaN(s))
+      .slice()
+      .sort((a, b) => a - b);
+    if (sorted.length === 0) return 0;
+
+    const trimCount = Math.floor(sorted.length * 0.1);
+    const trimmed = sorted.length >= 10 ? sorted.slice(trimCount, sorted.length - trimCount) : sorted;
+    const sum = trimmed.reduce((a, b) => a + b, 0);
+    return Math.round(sum / trimmed.length);
   }
 
   /**
@@ -300,7 +379,7 @@ class RepCounter {
     // 여기서는 자세 유지 여부만 반환
     const spineAngle = angles.spine || 0;
     const isHolding = spineAngle <= this.pattern.thresholds.maintain;
-    
+
     return {
       isHolding,
       angle: spineAngle
@@ -346,7 +425,13 @@ class RepCounter {
     this.lastRepTime = performance.now();
     this.stateHistory = [];
     this.repRecords = [];
+    this.repStartTime = null;
+    this.hadActive = false;
+    this.activeStateEnterTime = null;
+    this.activeTimeMs = 0;
     this.currentRepScores = [];
+    this.currentRepAllScores = [];
+    this.lastCompletedRepScore = 0;
   }
 }
 
