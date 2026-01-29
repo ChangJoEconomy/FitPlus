@@ -8,7 +8,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 
 <!-- FitPlus AI 모듈 -->
-<script src="/js/workout/one-euro-filter.js"></script>
 <script src="/js/workout/pose-engine.js"></script>
 <script src="/js/workout/scoring-engine.js"></script>
 <script src="/js/workout/rep-counter.js"></script>
@@ -360,8 +359,17 @@
     
     const { angles } = poseData;
     
+    // 디버깅: 각도 출력
+    // console.log('[Session] 각도:', angles);
+    
     // 1. 점수 계산
     const scoreResult = scoringEngine.calculate(angles);
+    
+    // 디버깅: 점수 결과
+    if (scoreResult.score > 0) {
+      console.log('[Session] 점수:', scoreResult.score, 'breakdown:', scoreResult.breakdown?.length);
+    }
+    
     updateScoreDisplay(scoreResult);
     
     // 2. 횟수 감지
@@ -401,12 +409,18 @@
     liveScoreEl.textContent = scoreResult.score;
     
     // 점수에 따른 색상
+    liveScoreEl.style.background = 'none';
+    liveScoreEl.style.webkitBackgroundClip = 'unset';
+    liveScoreEl.style.webkitTextFillColor = 'unset';
+    
     if (scoreResult.score >= 80) {
       liveScoreEl.style.color = '#22c55e';
     } else if (scoreResult.score >= 60) {
       liveScoreEl.style.color = '#eab308';
-    } else {
+    } else if (scoreResult.score > 0) {
       liveScoreEl.style.color = '#ef4444';
+    } else {
+      liveScoreEl.style.color = '#94a3b8';
     }
     
     // 세부 점수 표시
@@ -415,10 +429,12 @@
         .slice(0, 3) // 상위 3개만 표시
         .map(item => `
           <div class="score-item">
-            <span>${item.title}</span>
-            <span>${item.score}/${item.maxScore}</span>
+            <span>${item.title || item.key}</span>
+            <span>${Math.round(item.score)}/${item.maxScore}</span>
           </div>
         `).join('');
+    } else if (scoreResult.score === 0) {
+      scoreBreakdownEl.innerHTML = '<div class="score-item"><span class="muted">포즈 감지 중...</span></div>';
     }
   }
 

@@ -46,7 +46,7 @@ class PoseEngine {
     this.isInitialized = false;
     this.isRunning = false;
     this.lastResults = null;
-    
+
     // 콜백
     this.onPoseDetected = null;
     this.onError = null;
@@ -55,7 +55,7 @@ class PoseEngine {
     this.useOneEuroFilter = options.useOneEuroFilter ?? true;
     this.landmarkSmoother = null;
     this.worldLandmarkSmoother = null;
-    
+
     // 필터 설정 (SMOOTHER_PRESETS 참조)
     this.smootherConfig = options.smootherConfig || {
       minCutoff: 1.0,  // 낮을수록 부드러움
@@ -111,7 +111,7 @@ class PoseEngine {
    */
   async send(videoElement) {
     if (!this.isInitialized || !this.isRunning) return;
-    
+
     try {
       await this.pose.send({ image: videoElement });
     } catch (error) {
@@ -136,7 +136,7 @@ class PoseEngine {
     if (this.landmarkSmoother) {
       landmarks = this.landmarkSmoother.filter(timestamp, landmarks);
     }
-    
+
     // 월드 좌표 랜드마크 (미터 단위) - One Euro Filter 적용
     let worldLandmarks = results.poseWorldLandmarks;
     if (this.worldLandmarkSmoother && worldLandmarks) {
@@ -224,14 +224,14 @@ class PoseEngine {
   getAngle(p1, p2, p3) {
     if (!p1 || !p2 || !p3) return null;
 
-    const radians = Math.atan2(p3.y - p2.y, p3.x - p2.x) - 
-                    Math.atan2(p1.y - p2.y, p1.x - p2.x);
+    const radians = Math.atan2(p3.y - p2.y, p3.x - p2.x) -
+      Math.atan2(p1.y - p2.y, p1.x - p2.x);
     let degrees = Math.abs(radians * 180 / Math.PI);
-    
+
     if (degrees > 180) {
       degrees = 360 - degrees;
     }
-    
+
     return Math.round(degrees);
   }
 
@@ -300,12 +300,12 @@ class PoseEngine {
       [LANDMARKS.LEFT_ELBOW, LANDMARKS.LEFT_WRIST],
       [LANDMARKS.RIGHT_SHOULDER, LANDMARKS.RIGHT_ELBOW],
       [LANDMARKS.RIGHT_ELBOW, LANDMARKS.RIGHT_WRIST],
-      
+
       // 몸통
       [LANDMARKS.LEFT_SHOULDER, LANDMARKS.LEFT_HIP],
       [LANDMARKS.RIGHT_SHOULDER, LANDMARKS.RIGHT_HIP],
       [LANDMARKS.LEFT_HIP, LANDMARKS.RIGHT_HIP],
-      
+
       // 하체
       [LANDMARKS.LEFT_HIP, LANDMARKS.LEFT_KNEE],
       [LANDMARKS.LEFT_KNEE, LANDMARKS.LEFT_ANKLE],
@@ -319,7 +319,7 @@ class PoseEngine {
     connections.forEach(([start, end]) => {
       const p1 = landmarks[start];
       const p2 = landmarks[end];
-      
+
       if (p1.visibility > 0.5 && p2.visibility > 0.5) {
         ctx.beginPath();
         ctx.moveTo(p1.x * width, p1.y * height);
