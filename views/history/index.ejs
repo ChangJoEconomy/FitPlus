@@ -1,0 +1,712 @@
+<div class="page active">
+  <section class="page-header">
+    <div>
+      <h1>📊 운동 히스토리</h1>
+      <p class="muted">지금까지의 운동 기록을 확인하세요</p>
+    </div>
+  </section>
+
+  <!-- 통계 요약 카드 -->
+  <div class="grid four">
+    <!-- 연속 운동 -->
+    <div class="card hero stat-card">
+      <div class="stat-icon">🔥</div>
+      <div class="stat-content">
+        <span class="stat-value"><%= stats.streak %></span>
+        <span class="stat-label">일 연속</span>
+      </div>
+    </div>
+
+    <!-- 오늘 운동 -->
+    <div class="card stat-card">
+      <div class="stat-icon">📅</div>
+      <div class="stat-content">
+        <span class="stat-value"><%= stats.today.count %></span>
+        <span class="stat-label">오늘 운동</span>
+      </div>
+      <div class="stat-sub"><%= stats.today.totalMinutes %>분 / 평균 <%= stats.today.avgScore %>점</div>
+    </div>
+
+    <!-- 이번 주 -->
+    <div class="card stat-card">
+      <div class="stat-icon">📈</div>
+      <div class="stat-content">
+        <span class="stat-value"><%= stats.week.days %></span>
+        <span class="stat-label">이번 주 운동 일수</span>
+      </div>
+      <div class="stat-sub"><%= stats.week.count %>회 / <%= stats.week.totalMinutes %>분</div>
+    </div>
+
+    <!-- 총 운동 -->
+    <div class="card stat-card">
+      <div class="stat-icon">🏆</div>
+      <div class="stat-content">
+        <span class="stat-value"><%= stats.total %></span>
+        <span class="stat-label">총 운동 횟수</span>
+      </div>
+      <% if (stats.best) { %>
+        <div class="stat-sub">최고 <%= stats.best.final_score %>점 (<%= stats.best.exercise?.name %>)</div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- 필터 -->
+  <div class="filter-bar">
+    <form method="GET" action="/history" class="filter-form">
+      <div class="filter-group">
+        <label>운동</label>
+        <select name="exercise" onchange="this.form.submit()">
+          <option value="all">전체 운동</option>
+          <% exercises.forEach(ex => { %>
+            <option value="<%= ex.exercise_id %>" <%= filters.exercise === ex.exercise_id ? 'selected' : '' %>>
+              <%= ex.name %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>기간</label>
+        <select name="period" onchange="this.form.submit()">
+          <option value="all" <%= !filters.period || filters.period === 'all' ? 'selected' : '' %>>전체</option>
+          <option value="today" <%= filters.period === 'today' ? 'selected' : '' %>>오늘</option>
+          <option value="week" <%= filters.period === 'week' ? 'selected' : '' %>>이번 주</option>
+          <option value="month" <%= filters.period === 'month' ? 'selected' : '' %>>이번 달</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>정렬</label>
+        <select name="sort" onchange="this.form.submit()">
+          <option value="date" <%= !filters.sort || filters.sort === 'date' ? 'selected' : '' %>>최신순</option>
+          <option value="score" <%= filters.sort === 'score' ? 'selected' : '' %>>점수순</option>
+          <option value="duration" <%= filters.sort === 'duration' ? 'selected' : '' %>>시간순</option>
+        </select>
+      </div>
+    </form>
+  </div>
+
+  <!-- 운동 기록 목록 -->
+  <div class="history-list">
+    <% if (sessions.length === 0) { %>
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>운동 기록이 없습니다</h3>
+        <p class="muted">운동을 시작해서 기록을 만들어보세요!</p>
+        <div class="empty-actions">
+          <a href="/workout/free" class="primary">자율 운동 시작</a>
+          <a href="/routine" class="ghost">루틴 보기</a>
+        </div>
+      </div>
+    <% } else { %>
+      <% sessions.forEach(session => { %>
+        <div class="history-item" data-session-id="<%= session.session_id %>">
+          <div class="history-date">
+            <span class="date-day"><%= new Date(session.started_at).getDate() %></span>
+            <span class="date-month"><%= new Date(session.started_at).getMonth() + 1 %>월</span>
+            <span class="date-time">
+              <%= new Date(session.started_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) %>
+            </span>
+          </div>
+          
+          <div class="history-content">
+            <div class="history-header">
+              <h3 class="history-title"><%= session.exercise?.name || '운동' %></h3>
+              <span class="history-mode <%= session.mode.toLowerCase() %>">
+                <%= session.mode === 'ROUTINE' ? '루틴' : '자율' %>
+              </span>
+            </div>
+            <div class="history-stats">
+              <span class="history-stat">
+                <span class="stat-icon">⏱️</span>
+                <% 
+                  const mins = Math.floor((session.duration_sec || 0) / 60);
+                  const secs = (session.duration_sec || 0) % 60;
+                %>
+                <%= mins %>분 <%= secs %>초
+              </span>
+              <span class="history-stat">
+                <span class="stat-icon">🔄</span>
+                <%= session.total_reps || 0 %>회
+              </span>
+            </div>
+            <% if (session.summary_feedback) { %>
+              <p class="history-feedback"><%= session.summary_feedback %></p>
+            <% } %>
+          </div>
+
+          <div class="history-score">
+            <div class="score-circle <%= session.final_score >= 80 ? 'excellent' : session.final_score >= 60 ? 'good' : 'needs-work' %>">
+              <span class="score-value"><%= session.final_score || 0 %></span>
+              <span class="score-label">점</span>
+            </div>
+          </div>
+
+          <div class="history-actions">
+            <button class="ghost small" onclick="viewDetail('<%= session.session_id %>')">상세</button>
+            <button class="danger small" onclick="deleteSession('<%= session.session_id %>')">삭제</button>
+          </div>
+        </div>
+      <% }) %>
+
+      <!-- 페이지네이션 -->
+      <% if (pagination.totalPages > 1) { %>
+        <div class="pagination">
+          <% if (pagination.page > 1) { %>
+            <a href="?page=<%= pagination.page - 1 %>&exercise=<%= filters.exercise || 'all' %>&period=<%= filters.period || 'all' %>&sort=<%= filters.sort || 'date' %>" class="page-btn">
+              ← 이전
+            </a>
+          <% } %>
+          
+          <span class="page-info">
+            <%= pagination.page %> / <%= pagination.totalPages %> 페이지
+            <span class="muted">(총 <%= pagination.total %>개)</span>
+          </span>
+          
+          <% if (pagination.page < pagination.totalPages) { %>
+            <a href="?page=<%= pagination.page + 1 %>&exercise=<%= filters.exercise || 'all' %>&period=<%= filters.period || 'all' %>&sort=<%= filters.sort || 'date' %>" class="page-btn">
+              다음 →
+            </a>
+          <% } %>
+        </div>
+      <% } %>
+    <% } %>
+  </div>
+</div>
+
+<!-- 상세 모달 -->
+<div class="modal" id="detailModal" hidden>
+  <div class="modal-content large">
+    <div class="modal-header">
+      <h2 id="modalTitle">운동 상세</h2>
+      <button class="icon" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <div class="loading">로딩 중...</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .grid.four {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .stat-card.hero {
+    color: white;
+  }
+
+  .stat-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  .stat-content {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .stat-value {
+    font-size: 32px;
+    font-weight: 700;
+  }
+
+  .stat-label {
+    font-size: 14px;
+    opacity: 0.8;
+  }
+
+  .stat-sub {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-top: 8px;
+  }
+
+  .hero .stat-sub {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  /* 필터 바 */
+  .filter-bar {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 24px 0;
+  }
+
+  .filter-form {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .filter-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .filter-group select {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #f8fafc;
+    font-size: 14px;
+  }
+
+  /* 히스토리 목록 */
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .history-item {
+    display: grid;
+    grid-template-columns: 80px 1fr auto auto;
+    gap: 20px;
+    align-items: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    transition: all 0.2s ease;
+  }
+
+  .history-item:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+  }
+
+  .history-date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .date-day {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .date-month {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .date-time {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .history-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .history-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .history-title {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .history-mode {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .history-mode.free {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .history-mode.routine {
+    background: #ede9fe;
+    color: #7c3aed;
+  }
+
+  .history-stats {
+    display: flex;
+    gap: 16px;
+  }
+
+  .history-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .history-feedback {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .history-score {
+    display: flex;
+    justify-content: center;
+  }
+
+  .score-circle {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+  }
+
+  .score-circle.excellent {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    color: white;
+  }
+
+  .score-circle.good {
+    background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+    color: white;
+  }
+
+  .score-circle.needs-work {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+  }
+
+  .score-value {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .score-label {
+    font-size: 11px;
+    opacity: 0.9;
+  }
+
+  .history-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .history-actions button {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .history-actions .ghost:hover {
+    background: #f1f5f9;
+  }
+
+  .history-actions .danger {
+    color: var(--danger);
+    border-color: rgba(255, 92, 109, 0.3);
+  }
+
+  .history-actions .danger:hover {
+    background: rgba(255, 92, 109, 0.1);
+  }
+
+  /* 빈 상태 */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--card);
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .empty-state h3 {
+    margin: 0 0 8px 0;
+  }
+
+  .empty-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 24px;
+  }
+
+  /* 페이지네이션 */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    margin-top: 24px;
+    padding: 16px;
+  }
+
+  .page-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    background: var(--primary);
+    color: white;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .page-btn:hover {
+    background: var(--primary-dark);
+    text-decoration: none;
+  }
+
+  .page-info {
+    font-size: 14px;
+  }
+
+  /* 모달 */
+  .modal-content.large {
+    width: min(700px, 90%);
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .detail-item {
+    background: #f8fafc;
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .detail-item label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .detail-item .value {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .metric-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .metric-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 900px) {
+    .grid.four {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .history-item {
+      grid-template-columns: 60px 1fr;
+      gap: 16px;
+    }
+
+    .history-score,
+    .history-actions {
+      grid-column: span 2;
+      flex-direction: row;
+      justify-content: space-between;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .grid.four {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .filter-form {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .filter-group {
+      width: 100%;
+    }
+
+    .filter-group select {
+      flex: 1;
+    }
+  }
+</style>
+
+<script>
+  // 상세 보기
+  async function viewDetail(sessionId) {
+    const modal = document.getElementById('detailModal');
+    const modalBody = document.getElementById('modalBody');
+    
+    modal.hidden = false;
+    modalBody.innerHTML = '<div class="loading">로딩 중...</div>';
+
+    try {
+      const response = await fetch(`/api/history/${sessionId}`);
+      const session = await response.json();
+
+      if (session.error) {
+        modalBody.innerHTML = `<p class="error">${session.error}</p>`;
+        return;
+      }
+
+      const startDate = new Date(session.started_at);
+      const endDate = session.ended_at ? new Date(session.ended_at) : null;
+      const mins = Math.floor((session.duration_sec || 0) / 60);
+      const secs = (session.duration_sec || 0) % 60;
+
+      let metricsHtml = '';
+      if (session.session_metric_result && session.session_metric_result.length > 0) {
+        metricsHtml = `
+          <h4>📈 세부 점수</h4>
+          <div class="metric-list">
+            ${session.session_metric_result.map(r => `
+              <div class="metric-item">
+                <span>${r.metric?.title || '항목'}</span>
+                <strong>${r.score}점</strong>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      modalBody.innerHTML = `
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label>운동</label>
+            <div class="value">${session.exercise?.name || '운동'}</div>
+          </div>
+          <div class="detail-item">
+            <label>모드</label>
+            <div class="value">${session.mode === 'ROUTINE' ? '루틴' : '자율'}</div>
+          </div>
+          <div class="detail-item">
+            <label>최종 점수</label>
+            <div class="value" style="color: var(--primary);">${session.final_score || 0}점</div>
+          </div>
+          <div class="detail-item">
+            <label>운동 시간</label>
+            <div class="value">${mins}분 ${secs}초</div>
+          </div>
+          <div class="detail-item">
+            <label>총 반복</label>
+            <div class="value">${session.total_reps || 0}회</div>
+          </div>
+          <div class="detail-item">
+            <label>시작 시간</label>
+            <div class="value">${startDate.toLocaleString('ko-KR')}</div>
+          </div>
+        </div>
+        ${session.summary_feedback ? `<p style="background: #f8fafc; padding: 16px; border-radius: 12px; margin-bottom: 24px;">${session.summary_feedback}</p>` : ''}
+        ${metricsHtml}
+      `;
+    } catch (error) {
+      console.error('Detail fetch error:', error);
+      modalBody.innerHTML = '<p class="error">데이터를 불러올 수 없습니다.</p>';
+    }
+  }
+
+  // 모달 닫기
+  function closeModal() {
+    document.getElementById('detailModal').hidden = true;
+  }
+
+  // 세션 삭제
+  async function deleteSession(sessionId) {
+    if (!confirm('이 운동 기록을 삭제하시겠습니까?\n삭제된 기록은 복구할 수 없습니다.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/history/${sessionId}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // 해당 항목 제거
+        const item = document.querySelector(`[data-session-id="${sessionId}"]`);
+        if (item) {
+          item.style.opacity = '0';
+          item.style.transform = 'translateX(-20px)';
+          setTimeout(() => item.remove(), 300);
+        }
+      } else {
+        alert(result.error || '삭제 중 오류가 발생했습니다.');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('네트워크 오류가 발생했습니다.');
+    }
+  }
+
+  // 모달 외부 클릭 시 닫기
+  document.getElementById('detailModal').addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal')) {
+      closeModal();
+    }
+  });
+
+  // ESC 키로 모달 닫기
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+    }
+  });
+</script>

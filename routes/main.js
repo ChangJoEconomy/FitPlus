@@ -3,6 +3,7 @@ const { getSignupPage, handleSignup, checkLoginId } = require('../controllers/si
 const { getLoginPage, handleLogin } = require('../controllers/login');
 const { requireGuest, requireAuth, handleLogout } = require('../middleware/auth');
 const { getQuestPage, completeQuest, claimQuestReward, assignDailyQuests, assignWeeklyQuests } = require('../controllers/quest');
+const { getHistoryPage, getSessionDetail, getHistoryStats, deleteSession } = require('../controllers/history');
 const router = express.Router();
 
 const formatKoreanDate = () => {
@@ -47,5 +48,13 @@ router.get('/quest', requireAuth, assignDailyQuests, assignWeeklyQuests, getQues
 // 퀘스트 API
 router.post('/api/quest/:questId/complete', requireAuth, completeQuest);
 router.post('/api/quest/:questId/claim', requireAuth, claimQuestReward);
+
+// 운동 히스토리 (로그인 필요)
+router.get('/history', requireAuth, getHistoryPage);
+
+// 히스토리 API
+router.get('/api/history/stats', requireAuth, getHistoryStats);
+router.get('/api/history/:sessionId', requireAuth, getSessionDetail);
+router.delete('/api/history/:sessionId', requireAuth, deleteSession);
 
 module.exports = router;
