@@ -70,6 +70,7 @@
         <div class="card score-card">
           <div class="score-header">
             <span class="muted">이번 rep 점수</span>
+            <span class="muted" id="viewInfo" style="font-size: 12px;"></span>
           </div>
           <div class="score" id="liveScore">--</div>
           <div class="score-detail" id="scoreBreakdown">
@@ -180,7 +181,12 @@
       timerInterval: null,
       restInterval: null,
       alertCooldown: false,
-      frameLoop: null
+      frameLoop: null,
+      lastViewInfoAt: 0,
+      lastViewInfoText: '',
+      repInProgressPrev: false,
+      repMetricBuffer: {},
+      lastRepMetricSummary: []
     };
 
     // DOM 요소
@@ -190,6 +196,7 @@
     const statusBadge = document.getElementById('statusBadge');
     const liveScoreEl = document.getElementById('liveScore');
     const scoreBreakdownEl = document.getElementById('scoreBreakdown');
+    const viewInfoEl = document.getElementById('viewInfo');
     const repCountEl = document.getElementById('repCount');
     const setCountEl = document.getElementById('setCount');
     const timerValueEl = document.getElementById('timerValue');
@@ -359,6 +366,7 @@
       if (state.phase !== 'WORKING' || state.isPaused) return;
 
       const { angles } = poseData;
+      updateViewInfo(angles);
 
       // 디버깅: 각도 출력
       // console.log('[Session] 각도:', angles);
@@ -374,6 +382,8 @@
       // 2. 횟수 감지 (rep 상태/점수 집계를 위해 먼저 업데이트)
       repCounter.update(angles, scoreResult.score);
 
+      updateRepMetricBuffer(scoreResult);
+
       updateScoreDisplay(scoreResult);
 
       // 3. 세션 버퍼에 저장
@@ -388,10 +398,84 @@
       }
     }
 
+    function aggregateScores(scores) {
+      if (!scores || scores.length === 0) return 0;
+      const sorted = scores
+        .filter(s => typeof s === 'number' && !Number.isNaN(s))
+        .slice()
+        .sort((a, b) => a - b);
+      if (sorted.length === 0) return 0;
+
+      const trimCount = Math.floor(sorted.length * 0.1);
+      const trimmed = sorted.length >= 10 ? sorted.slice(trimCount, sorted.length - trimCount) : sorted;
+      const sum = trimmed.reduce((a, b) => a + b, 0);
+      return Math.round(sum / trimmed.length);
+    }
+
+    function updateRepMetricBuffer(scoreResult) {
+      const isTimeBased = repCounter?.pattern?.isTimeBased;
+      if (isTimeBased) return;
+
+      const isRepInProgress = repCounter?.isInProgress ? repCounter.isInProgress() : false;
+      if (isRepInProgress && !state.repInProgressPrev) {
+        // rep 시작 시 버퍼 리셋
+        state.repMetricBuffer = {};
+      }
+      state.repInProgressPrev = isRepInProgress;
+
+      // rep 진행 중 + ACTIVE 구간만 누적 (올라오는 TRANSITION에서 점수 급락하는 문제 방지)
+      if (!isRepInProgress) return;
+      if (repCounter?.currentState !== window.REP_STATES?.ACTIVE) return;
+
+      if (!scoreResult?.breakdown || scoreResult.breakdown.length === 0) return;
+      for (const item of scoreResult.breakdown) {
+        const key = item.key;
+        if (!key) continue;
+        if (!state.repMetricBuffer[key]) {
+          state.repMetricBuffer[key] = {
+            metric_id: item.metric_id,
+            key,
+            title: item.title || key,
+            maxScore: item.maxScore,
+            scores: []
+          };
+        }
+        state.repMetricBuffer[key].scores.push(item.score);
+      }
+    }
+
+    function updateViewInfo(angles) {
+      if (!viewInfoEl || !angles) return;
+
+      const now = performance.now();
+      if (now - state.lastViewInfoAt < 250) return; // DOM 업데이트 과다 방지
+      state.lastViewInfoAt = now;
+
+      const view = angles.view || 'UNKNOWN';
+      const source = angles.angleSource || 'UNKNOWN';
+      const text = `VIEW: ${view} / SRC: ${source}`;
+
+      if (text !== state.lastViewInfoText) {
+        state.lastViewInfoText = text;
+        viewInfoEl.textContent = text;
+      }
+    }
+
     // 횟수 완료 처리
     function handleRepComplete(repRecord) {
       state.currentRep = repRecord.repNumber;
       repCountEl.textContent = state.currentRep;
+
+      // 마지막 rep의 메트릭 요약 저장 (ACTIVE 구간 기준)
+      state.lastRepMetricSummary = Object.values(state.repMetricBuffer || {})
+        .map(m => ({
+          metric_id: m.metric_id,
+          key: m.key,
+          title: m.title,
+          maxScore: m.maxScore,
+          score: aggregateScores(m.scores)
+        }))
+        .sort((a, b) => (b.score / (b.maxScore || 1)) - (a.score / (a.maxScore || 1)));
 
       // 버퍼에 기록
       if (sessionBuffer) {
@@ -439,11 +523,26 @@
       }
 
       // 세부 점수 표시
-      const shouldShowBreakdown = scoreResult.breakdown && scoreResult.breakdown.length > 0 &&
-        (isTimeBased || isRepInProgress);
+      const shouldShowBreakdown = isTimeBased
+        ? (scoreResult.breakdown && scoreResult.breakdown.length > 0)
+        : ((isRepInProgress && Object.keys(state.repMetricBuffer || {}).length > 0) ||
+          (!isRepInProgress && hasAnyRep && (state.lastRepMetricSummary?.length > 0)));
 
       if (shouldShowBreakdown) {
-        scoreBreakdownEl.innerHTML = scoreResult.breakdown
+        const items = isTimeBased
+          ? scoreResult.breakdown
+          : (isRepInProgress
+            ? Object.values(state.repMetricBuffer).map(m => ({
+              key: m.key,
+              title: m.title,
+              score: aggregateScores(m.scores),
+              maxScore: m.maxScore
+            }))
+            : state.lastRepMetricSummary);
+
+        scoreBreakdownEl.innerHTML = items
+          .filter(it => it && it.maxScore != null)
+          .sort((a, b) => (b.score / (b.maxScore || 1)) - (a.score / (a.maxScore || 1)))
           .slice(0, 3) // 상위 3개만 표시
           .map(item => `
           <div class="score-item">

@@ -365,7 +365,7 @@ class RepCounter {
       .sort((a, b) => a - b);
     if (sorted.length === 0) return 0;
 
-    const trimCount = Math.floor(sorted.length * 0.1);
+    const trimCount = Math.floor(sorted.length * 0.05);
     const trimmed = sorted.length >= 10 ? sorted.slice(trimCount, sorted.length - trimCount) : sorted;
     const sum = trimmed.reduce((a, b) => a + b, 0);
     return Math.round(sum / trimmed.length);

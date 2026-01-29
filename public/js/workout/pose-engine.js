@@ -56,6 +56,10 @@ class PoseEngine {
     this.landmarkSmoother = null;
     this.worldLandmarkSmoother = null;
 
+    // 카메라 뷰(정면/측면) 추정 히스토리 (각도 계산 소스 선택용)
+    this.viewHistory = [];
+    this.maxViewHistoryLength = 10;
+
     // 필터 설정 (SMOOTHER_PRESETS 참조)
     this.smootherConfig = options.smootherConfig || {
       minCutoff: 1.0,  // 낮을수록 부드러움
@@ -143,8 +147,10 @@ class PoseEngine {
       worldLandmarks = this.worldLandmarkSmoother.filter(timestamp, worldLandmarks);
     }
 
-    // 관절 각도 계산 (필터링된 랜드마크 사용)
-    const angles = this.calculateAllAngles(landmarks);
+    // 관절 각도 계산
+    // - 측면/정면 모두에서 일관된 각도를 얻기 위해 worldLandmarks(3D)가 있으면 우선 사용
+    // - worldLandmarks가 없으면 기존 2D(이미지 평면) 각도로 fallback
+    const angles = this.calculateAllAngles(landmarks, worldLandmarks);
 
     // 콜백 호출
     if (this.onPoseDetected) {
@@ -160,62 +166,118 @@ class PoseEngine {
   /**
    * 모든 주요 관절 각도 계산
    */
-  calculateAllAngles(landmarks) {
+  calculateAllAngles(landmarks, worldLandmarks = null) {
+    const canUseWorld = Array.isArray(worldLandmarks) && worldLandmarks.length >= 33;
+    const get = (arr, idx) => (Array.isArray(arr) ? arr[idx] : null);
+    const validPoint = (p) =>
+      p && Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z);
+
+    const view = canUseWorld ? this.getStableView(worldLandmarks) : 'UNKNOWN';
+    const prefer2DForFlexion = view === 'SIDE';
+
+    const angle2D = (idx1, idx2, idx3) =>
+      this.getAngle(get(landmarks, idx1), get(landmarks, idx2), get(landmarks, idx3));
+
+    const angle3D = (idx1, idx2, idx3) => {
+      if (canUseWorld) {
+        const p1 = get(worldLandmarks, idx1);
+        const p2 = get(worldLandmarks, idx2);
+        const p3 = get(worldLandmarks, idx3);
+        if (validPoint(p1) && validPoint(p2) && validPoint(p3)) {
+          return this.getAngle3D(p1, p2, p3);
+        }
+      }
+      return null;
+    };
+
+    // 측면: 2D가 더 안정적인 경우가 많고(특히 스쿼트/푸쉬업 굽힘각),
+    // 정면: 굽힘이 화면 밖(z축)으로 빠져 2D가 둔감해져서 3D를 우선 사용
+    const angleFlexion = (idx1, idx2, idx3) => {
+      const a2 = angle2D(idx1, idx2, idx3);
+      const a3 = angle3D(idx1, idx2, idx3);
+      if (!canUseWorld) return a2;
+      if (prefer2DForFlexion) return a2 ?? a3;
+      return a3 ?? a2;
+    };
+
     return {
       // 무릎 각도 (서있을 때 ~180도, 스쿼트 시 ~90도)
-      leftKnee: this.getAngle(
-        landmarks[LANDMARKS.LEFT_HIP],
-        landmarks[LANDMARKS.LEFT_KNEE],
-        landmarks[LANDMARKS.LEFT_ANKLE]
-      ),
-      rightKnee: this.getAngle(
-        landmarks[LANDMARKS.RIGHT_HIP],
-        landmarks[LANDMARKS.RIGHT_KNEE],
-        landmarks[LANDMARKS.RIGHT_ANKLE]
-      ),
+      leftKnee: angleFlexion(LANDMARKS.LEFT_HIP, LANDMARKS.LEFT_KNEE, LANDMARKS.LEFT_ANKLE),
+      rightKnee: angleFlexion(LANDMARKS.RIGHT_HIP, LANDMARKS.RIGHT_KNEE, LANDMARKS.RIGHT_ANKLE),
 
       // 팔꿈치 각도 (팔 폈을 때 ~180도, 굽힐 때 ~45도)
-      leftElbow: this.getAngle(
-        landmarks[LANDMARKS.LEFT_SHOULDER],
-        landmarks[LANDMARKS.LEFT_ELBOW],
-        landmarks[LANDMARKS.LEFT_WRIST]
-      ),
-      rightElbow: this.getAngle(
-        landmarks[LANDMARKS.RIGHT_SHOULDER],
-        landmarks[LANDMARKS.RIGHT_ELBOW],
-        landmarks[LANDMARKS.RIGHT_WRIST]
-      ),
+      leftElbow: angleFlexion(LANDMARKS.LEFT_SHOULDER, LANDMARKS.LEFT_ELBOW, LANDMARKS.LEFT_WRIST),
+      rightElbow: angleFlexion(LANDMARKS.RIGHT_SHOULDER, LANDMARKS.RIGHT_ELBOW, LANDMARKS.RIGHT_WRIST),
 
       // 엉덩이 각도 (서있을 때 ~180도, 굽힐 때 감소)
-      leftHip: this.getAngle(
-        landmarks[LANDMARKS.LEFT_SHOULDER],
-        landmarks[LANDMARKS.LEFT_HIP],
-        landmarks[LANDMARKS.LEFT_KNEE]
-      ),
-      rightHip: this.getAngle(
-        landmarks[LANDMARKS.RIGHT_SHOULDER],
-        landmarks[LANDMARKS.RIGHT_HIP],
-        landmarks[LANDMARKS.RIGHT_KNEE]
-      ),
+      leftHip: angleFlexion(LANDMARKS.LEFT_SHOULDER, LANDMARKS.LEFT_HIP, LANDMARKS.LEFT_KNEE),
+      rightHip: angleFlexion(LANDMARKS.RIGHT_SHOULDER, LANDMARKS.RIGHT_HIP, LANDMARKS.RIGHT_KNEE),
 
       // 어깨 각도 (팔 내렸을 때 ~0도, 올렸을 때 ~180도)
-      leftShoulder: this.getAngle(
-        landmarks[LANDMARKS.LEFT_HIP],
-        landmarks[LANDMARKS.LEFT_SHOULDER],
-        landmarks[LANDMARKS.LEFT_ELBOW]
-      ),
-      rightShoulder: this.getAngle(
-        landmarks[LANDMARKS.RIGHT_HIP],
-        landmarks[LANDMARKS.RIGHT_SHOULDER],
-        landmarks[LANDMARKS.RIGHT_ELBOW]
-      ),
+      leftShoulder: angleFlexion(LANDMARKS.LEFT_HIP, LANDMARKS.LEFT_SHOULDER, LANDMARKS.LEFT_ELBOW),
+      rightShoulder: angleFlexion(LANDMARKS.RIGHT_HIP, LANDMARKS.RIGHT_SHOULDER, LANDMARKS.RIGHT_ELBOW),
 
       // 척추 각도 (상체 기울기)
-      spine: this.getSpineAngle(landmarks),
+      spine: this.getSpineAngle(landmarks, (!prefer2DForFlexion && canUseWorld) ? worldLandmarks : null),
 
       // 무릎 정렬 (무릎이 발끝을 넘는지)
-      kneeAlignment: this.getKneeAlignment(landmarks)
+      kneeAlignment: this.getKneeAlignment(landmarks),
+
+      // 디버깅/품질 확인용
+      view,
+      angleSource: !canUseWorld ? 'IMAGE_2D' : (prefer2DForFlexion ? 'SMART_IMAGE_2D' : 'SMART_WORLD_3D')
     };
+  }
+
+  /**
+   * worldLandmarks 기반으로 카메라 뷰(정면/측면) 분류
+   * - 좌/우 어깨(또는 힙)의 z 차이가 x 차이보다 크면 측면에 가까움
+   */
+  classifyView(worldLandmarks) {
+    if (!Array.isArray(worldLandmarks) || worldLandmarks.length < 33) return 'UNKNOWN';
+
+    const ls = worldLandmarks[LANDMARKS.LEFT_SHOULDER];
+    const rs = worldLandmarks[LANDMARKS.RIGHT_SHOULDER];
+    const lh = worldLandmarks[LANDMARKS.LEFT_HIP];
+    const rh = worldLandmarks[LANDMARKS.RIGHT_HIP];
+
+    const valid = (p) =>
+      p && Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z);
+    if (!valid(ls) || !valid(rs) || !valid(lh) || !valid(rh)) return 'UNKNOWN';
+
+    const eps = 1e-6;
+    const shoulderX = Math.abs(ls.x - rs.x);
+    const shoulderZ = Math.abs(ls.z - rs.z);
+    const hipX = Math.abs(lh.x - rh.x);
+    const hipZ = Math.abs(lh.z - rh.z);
+
+    const shoulderRatio = shoulderZ / (shoulderX + eps);
+    const hipRatio = hipZ / (hipX + eps);
+    const ratio = Math.max(shoulderRatio, hipRatio);
+
+    // 경험적으로 0.75~1.0 사이가 전환 구간 (OBLIQUE는 SIDE로 취급)
+    return ratio > 0.75 ? 'SIDE' : 'FRONT';
+  }
+
+  /**
+   * 뷰 분류를 히스토리로 안정화 (최근 N프레임 다수결)
+   */
+  getStableView(worldLandmarks) {
+    const raw = this.classifyView(worldLandmarks);
+    if (raw === 'UNKNOWN') return raw;
+
+    this.viewHistory.push(raw);
+    if (this.viewHistory.length > this.maxViewHistoryLength) {
+      this.viewHistory.shift();
+    }
+
+    let side = 0;
+    let front = 0;
+    for (const v of this.viewHistory) {
+      if (v === 'SIDE') side++;
+      else if (v === 'FRONT') front++;
+    }
+    return side >= front ? 'SIDE' : 'FRONT';
   }
 
   /**
@@ -236,9 +298,63 @@ class PoseEngine {
   }
 
   /**
+   * 세 점 사이의 3D 각도 계산 (도 단위)
+   * - camera view(측면/정면)에 덜 민감
+   */
+  getAngle3D(p1, p2, p3) {
+    if (!p1 || !p2 || !p3) return null;
+
+    const v1 = { x: p1.x - p2.x, y: p1.y - p2.y, z: p1.z - p2.z };
+    const v2 = { x: p3.x - p2.x, y: p3.y - p2.y, z: p3.z - p2.z };
+
+    const dot = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+    const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z);
+    const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y + v2.z * v2.z);
+    if (!mag1 || !mag2) return null;
+
+    let cos = dot / (mag1 * mag2);
+    cos = Math.max(-1, Math.min(1, cos));
+    const radians = Math.acos(cos);
+    return Math.round(radians * 180 / Math.PI);
+  }
+
+  /**
    * 척추(상체) 기울기 각도 계산
    */
-  getSpineAngle(landmarks) {
+  getSpineAngle(landmarks, worldLandmarks = null) {
+    // 3D world landmark가 있으면 전체 기울기(수직 대비)를 계산해서 정면/측면 모두에서 의미 있게 만듦
+    if (Array.isArray(worldLandmarks) && worldLandmarks.length >= 33) {
+      const ls = worldLandmarks[LANDMARKS.LEFT_SHOULDER];
+      const rs = worldLandmarks[LANDMARKS.RIGHT_SHOULDER];
+      const lh = worldLandmarks[LANDMARKS.LEFT_HIP];
+      const rh = worldLandmarks[LANDMARKS.RIGHT_HIP];
+
+      const valid = (p) =>
+        p && Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z);
+
+      if (valid(ls) && valid(rs) && valid(lh) && valid(rh)) {
+        const shoulderMid = {
+          x: (ls.x + rs.x) / 2,
+          y: (ls.y + rs.y) / 2,
+          z: (ls.z + rs.z) / 2
+        };
+        const hipMid = {
+          x: (lh.x + rh.x) / 2,
+          y: (lh.y + rh.y) / 2,
+          z: (lh.z + rh.z) / 2
+        };
+
+        const vx = shoulderMid.x - hipMid.x;
+        const vy = shoulderMid.y - hipMid.y;
+        const vz = shoulderMid.z - hipMid.z;
+
+        const horiz = Math.sqrt(vx * vx + vz * vz);
+        const vert = Math.abs(vy);
+        const angle = Math.atan2(horiz, vert) * 180 / Math.PI;
+        return Math.round(angle);
+      }
+    }
+
     const shoulderMid = {
       x: (landmarks[LANDMARKS.LEFT_SHOULDER].x + landmarks[LANDMARKS.RIGHT_SHOULDER].x) / 2,
       y: (landmarks[LANDMARKS.LEFT_SHOULDER].y + landmarks[LANDMARKS.RIGHT_SHOULDER].y) / 2
@@ -369,6 +485,7 @@ class PoseEngine {
     if (this.worldLandmarkSmoother) {
       this.worldLandmarkSmoother.reset();
     }
+    this.viewHistory = [];
     console.log('[PoseEngine] 필터 리셋 완료');
   }
 
