@@ -49,10 +49,6 @@
   color: white;
 }
 
-.admin-avatar {
-  background: var(--primary) !important;
-}
-
 .admin-container {
   display: flex;
   min-height: calc(100vh - 80px);

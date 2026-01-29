@@ -1,0 +1,329 @@
+<div class="admin-header">
+  <h1>퀘스트 관리</h1>
+  <p class="admin-subtitle">일일/주간 퀘스트 템플릿을 관리합니다.</p>
+</div>
+
+<% if (success) { %>
+  <div class="alert success"><%= success %></div>
+<% } %>
+<% if (error) { %>
+  <div class="alert error"><%= error %></div>
+<% } %>
+
+<!-- 새 퀘스트 추가 폼 -->
+<div class="admin-card">
+  <div class="admin-card-header">
+    <h2 class="admin-card-title">새 퀘스트 템플릿</h2>
+  </div>
+  <form action="/admin/quests" method="POST" class="admin-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">범위 *</label>
+        <select name="scope" class="form-select" required>
+          <option value="DAILY">일일</option>
+          <option value="WEEKLY">주간</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">유형 *</label>
+        <select name="type" class="form-select" required>
+          <option value="DO">수행 (DO)</option>
+          <option value="QUALITY">품질 (QUALITY)</option>
+          <option value="HABIT">습관 (HABIT)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">보상 포인트 *</label>
+        <input type="number" name="reward_points" class="form-input" value="100" min="0" required />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">제목 *</label>
+      <input type="text" name="title" class="form-input" placeholder="오늘 운동 3회 완료하기" required />
+    </div>
+    <div class="form-group">
+      <label class="form-label">조건 (JSON)</label>
+      <textarea name="condition" class="form-textarea" rows="3" placeholder='{"metric": "workout_count", "target": 3}'></textarea>
+      <div class="form-hint">
+        사용 가능한 metric: workout_count, exercise_code, total_reps, duration_min, sets, score_above, avg_score, weekly_days
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="toggle">
+          <input type="checkbox" name="is_default" />
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">기본 퀘스트 (자동 할당)</span>
+      </div>
+      <div class="form-group">
+        <label class="toggle">
+          <input type="checkbox" name="is_active" checked />
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">활성화</span>
+      </div>
+    </div>
+    <button type="submit" class="btn primary">퀘스트 추가</button>
+  </form>
+</div>
+
+<!-- 퀘스트 목록 -->
+<div class="admin-card">
+  <div class="admin-card-header">
+    <h2 class="admin-card-title">퀘스트 템플릿 목록</h2>
+    <span class="badge"><%= templates.length %>개</span>
+  </div>
+
+  <% if (templates.length === 0) { %>
+    <p class="empty-message">등록된 퀘스트 템플릿이 없습니다.</p>
+  <% } else { %>
+    <div class="quest-template-list">
+      <% templates.forEach(template => { %>
+        <div class="quest-template-item <%= !template.is_active ? 'inactive' : '' %>">
+          <div class="quest-template-header">
+            <div class="quest-template-badges">
+              <span class="scope-badge <%= template.scope.toLowerCase() %>">
+                <%= template.scope === 'DAILY' ? '일일' : '주간' %>
+              </span>
+              <span class="type-badge <%= template.type.toLowerCase() %>">
+                <%= template.type === 'DO' ? '수행' : template.type === 'QUALITY' ? '품질' : '습관' %>
+              </span>
+              <% if (template.is_default) { %>
+                <span class="default-badge">기본</span>
+              <% } %>
+              <% if (!template.is_active) { %>
+                <span class="inactive-badge">비활성</span>
+              <% } %>
+            </div>
+            <span class="reward-points">+<%= template.reward_points %>P</span>
+          </div>
+          
+          <h3 class="quest-template-title"><%= template.title %></h3>
+          
+          <div class="quest-template-condition">
+            <code><%= JSON.stringify(template.condition) %></code>
+          </div>
+
+          <div class="quest-template-actions">
+            <button type="button" class="btn ghost small" onclick="editQuest('<%= template.quest_template_id %>')">
+              수정
+            </button>
+            <form action="/admin/quests/<%= template.quest_template_id %>/delete" method="POST" style="display: inline;">
+              <button type="submit" class="btn danger small" onclick="return confirm('정말 삭제하시겠습니까?')">
+                삭제
+              </button>
+            </form>
+          </div>
+
+          <!-- 수정 폼 (숨김) -->
+          <form id="edit-form-<%= template.quest_template_id %>" class="edit-form hidden" 
+                action="/admin/quests/<%= template.quest_template_id %>" method="POST">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">범위</label>
+                <select name="scope" class="form-select">
+                  <option value="DAILY" <%= template.scope === 'DAILY' ? 'selected' : '' %>>일일</option>
+                  <option value="WEEKLY" <%= template.scope === 'WEEKLY' ? 'selected' : '' %>>주간</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">유형</label>
+                <select name="type" class="form-select">
+                  <option value="DO" <%= template.type === 'DO' ? 'selected' : '' %>>수행</option>
+                  <option value="QUALITY" <%= template.type === 'QUALITY' ? 'selected' : '' %>>품질</option>
+                  <option value="HABIT" <%= template.type === 'HABIT' ? 'selected' : '' %>>습관</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">보상</label>
+                <input type="number" name="reward_points" class="form-input" value="<%= template.reward_points %>" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">제목</label>
+              <input type="text" name="title" class="form-input" value="<%= template.title %>" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">조건 (JSON)</label>
+              <textarea name="condition" class="form-textarea" rows="2"><%= JSON.stringify(template.condition) %></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="toggle">
+                  <input type="checkbox" name="is_default" <%= template.is_default ? 'checked' : '' %> />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label">기본</span>
+              </div>
+              <div class="form-group">
+                <label class="toggle">
+                  <input type="checkbox" name="is_active" <%= template.is_active ? 'checked' : '' %> />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label">활성</span>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn primary small">저장</button>
+              <button type="button" class="btn ghost small" onclick="cancelEdit('<%= template.quest_template_id %>')">취소</button>
+            </div>
+          </form>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+
+<style>
+  .quest-template-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .quest-template-item {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .quest-template-item.inactive {
+    opacity: 0.6;
+  }
+
+  .quest-template-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .quest-template-badges {
+    display: flex;
+    gap: 8px;
+  }
+
+  .scope-badge, .type-badge, .default-badge, .inactive-badge {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .scope-badge.daily {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .scope-badge.weekly {
+    background: #ede9fe;
+    color: #7c3aed;
+  }
+
+  .type-badge.do {
+    background: #dcfce7;
+    color: #16a34a;
+  }
+
+  .type-badge.quality {
+    background: #fef3c7;
+    color: #b45309;
+  }
+
+  .type-badge.habit {
+    background: #fce7f3;
+    color: #be185d;
+  }
+
+  .default-badge {
+    background: #0f172a;
+    color: white;
+  }
+
+  .inactive-badge {
+    background: #f1f5f9;
+    color: #64748b;
+  }
+
+  .reward-points {
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 16px;
+  }
+
+  .quest-template-title {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+  }
+
+  .quest-template-condition {
+    margin-bottom: 12px;
+  }
+
+  .quest-template-condition code {
+    background: #e2e8f0;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #475569;
+  }
+
+  .quest-template-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .edit-form {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border);
+  }
+
+  .edit-form.hidden {
+    display: none;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 13px;
+    resize: vertical;
+  }
+
+  .toggle-label {
+    margin-left: 8px;
+    font-size: 14px;
+  }
+
+  .btn.small {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+</style>
+
+<script>
+  function editQuest(id) {
+    document.getElementById(`edit-form-${id}`).classList.remove('hidden');
+  }
+
+  function cancelEdit(id) {
+    document.getElementById(`edit-form-${id}`).classList.add('hidden');
+  }
+</script>

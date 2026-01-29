@@ -148,17 +148,6 @@ body {
   color: inherit;
 }
 
-.avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: #0f172a;
-  color: white;
-  display: grid;
-  place-items: center;
-  font-weight: 600;
-}
-
 .profile-text {
   display: flex;
   flex-direction: column;

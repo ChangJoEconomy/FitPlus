@@ -40,6 +40,15 @@
               </a>
             </div>
             <div class="sidebar-section">
+              <div class="sidebar-title">퀘스트 & 보상</div>
+              <a class="sidebar-link <%= currentTab === 'quests' ? 'active' : '' %>" href="/admin/quests">
+                퀘스트 관리
+              </a>
+              <a class="sidebar-link <%= currentTab === 'tiers' ? 'active' : '' %>" href="/admin/tiers">
+                티어 관리
+              </a>
+            </div>
+            <div class="sidebar-section">
               <div class="sidebar-title">시스템</div>
               <a class="sidebar-link <%= currentTab === 'users' ? 'active' : '' %>" href="/admin/users">
                 사용자 관리

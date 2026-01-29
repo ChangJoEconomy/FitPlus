@@ -29,8 +29,7 @@
           <a class="<%= tabClass('learn') %>" href="/learn">운동 배우기</a>
         </nav>
         <div class="profile-area">
-          <span class="avatar"><%= displayName.slice(0, 1).toUpperCase() %></span>
-          <span class="name"><%= displayName %></span>
+          <a class="name" href="/"><%= displayName %></span>
           <% if (isLoggedIn) { %>
             <a class="auth-btn logout-btn" href="/logout">로그아웃</a>
           <% } else { %>

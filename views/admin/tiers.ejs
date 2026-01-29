@@ -1,0 +1,190 @@
+<div class="admin-header">
+  <h1>티어 관리</h1>
+  <p class="admin-subtitle">사용자 등급 시스템을 관리합니다.</p>
+</div>
+
+<% if (success) { %>
+  <div class="alert success"><%= success %></div>
+<% } %>
+<% if (error) { %>
+  <div class="alert error"><%= error %></div>
+<% } %>
+
+<!-- 새 티어 추가 폼 -->
+<div class="admin-card">
+  <div class="admin-card-header">
+    <h2 class="admin-card-title">티어 추가/수정</h2>
+  </div>
+  <form action="/admin/tiers" method="POST" class="admin-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">티어 레벨 *</label>
+        <input type="number" name="tier" class="form-input" placeholder="1" min="1" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">티어 이름 *</label>
+        <input type="text" name="name" class="form-input" placeholder="브론즈" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">필요 포인트 *</label>
+        <input type="number" name="min_points" class="form-input" placeholder="0" min="0" required />
+      </div>
+    </div>
+    <button type="submit" class="btn primary">티어 저장</button>
+  </form>
+</div>
+
+<!-- 티어 목록 -->
+<div class="admin-card">
+  <div class="admin-card-header">
+    <h2 class="admin-card-title">티어 목록</h2>
+    <span class="badge"><%= tiers.length %>개</span>
+  </div>
+
+  <% if (tiers.length === 0) { %>
+    <p class="empty-message">등록된 티어가 없습니다.</p>
+    <div class="tier-presets">
+      <p>추천 티어 구성:</p>
+      <ul>
+        <li>1 - 브론즈 (0P)</li>
+        <li>2 - 실버 (1,000P)</li>
+        <li>3 - 골드 (5,000P)</li>
+        <li>4 - 다이아 (15,000P)</li>
+        <li>5 - 마스터 (50,000P)</li>
+      </ul>
+    </div>
+  <% } else { %>
+    <div class="tier-list">
+      <% tiers.forEach(tier => { %>
+        <div class="tier-item">
+          <div class="tier-icon">
+            <% if (tier.tier === 1) { %>🥉
+            <% } else if (tier.tier === 2) { %>🥈
+            <% } else if (tier.tier === 3) { %>🥇
+            <% } else if (tier.tier === 4) { %>💎
+            <% } else { %>👑
+            <% } %>
+          </div>
+          <div class="tier-info">
+            <h3 class="tier-name"><%= tier.name %></h3>
+            <span class="tier-level">레벨 <%= tier.tier %></span>
+          </div>
+          <div class="tier-points">
+            <span class="points-value"><%= tier.min_points.toLocaleString() %></span>
+            <span class="points-label">P 이상</span>
+          </div>
+          <form action="/admin/tiers" method="POST" class="tier-edit-form">
+            <input type="hidden" name="tier" value="<%= tier.tier %>" />
+            <input type="text" name="name" value="<%= tier.name %>" class="form-input small" />
+            <input type="number" name="min_points" value="<%= tier.min_points %>" class="form-input small" />
+            <button type="submit" class="btn ghost small">수정</button>
+          </form>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+
+<style>
+  .tier-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tier-item {
+    display: grid;
+    grid-template-columns: 60px 1fr 120px 1fr;
+    gap: 16px;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .tier-icon {
+    font-size: 32px;
+    text-align: center;
+  }
+
+  .tier-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .tier-name {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .tier-level {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .tier-points {
+    text-align: center;
+  }
+
+  .points-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .points-label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .tier-edit-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .tier-edit-form .form-input.small {
+    width: 100px;
+    padding: 8px;
+    font-size: 13px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .tier-presets {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 12px;
+  }
+
+  .tier-presets p {
+    margin: 0 0 8px 0;
+    font-weight: 600;
+  }
+
+  .tier-presets ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+
+  .tier-presets li {
+    margin: 4px 0;
+    color: var(--muted);
+  }
+
+  .btn.small {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+</style>

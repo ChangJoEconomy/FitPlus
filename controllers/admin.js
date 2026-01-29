@@ -510,6 +510,179 @@ const updateUserStatus = asyncHandler(async (req, res) => {
     res.redirect(`/admin/users?success=사용자가 ${statusText}되었습니다`);
 });
 
+
+// ============ 퀘스트 템플릿 관리 ============
+
+// 퀘스트 템플릿 목록
+const getQuestTemplates = asyncHandler(async (req, res) => {
+    const { data: templates, error } = await supabase
+        .from('quest_template')
+        .select('*')
+        .order('scope')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Quest template fetch error:', error);
+    }
+
+    res.render('admin/quests', {
+        title: '퀘스트 관리',
+        layout: 'layouts/admin',
+        activeTab: 'quests',
+        templates: templates || [],
+        success: req.query.success,
+        error: req.query.error
+    });
+});
+
+// 퀘스트 템플릿 생성
+const createQuestTemplate = asyncHandler(async (req, res) => {
+    const { scope, type, title, condition, reward_points, is_default, is_active } = req.body;
+
+    // condition JSON 파싱
+    let parsedCondition = {};
+    try {
+        if (condition) {
+            parsedCondition = typeof condition === 'string' ? JSON.parse(condition) : condition;
+        }
+    } catch (e) {
+        return res.redirect('/admin/quests?error=조건 형식이 올바르지 않습니다');
+    }
+
+    const { error } = await supabase
+        .from('quest_template')
+        .insert({
+            scope,
+            type,
+            title,
+            condition: parsedCondition,
+            reward_points: parseInt(reward_points) || 0,
+            is_default: is_default === 'on',
+            is_active: is_active === 'on'
+        });
+
+    if (error) {
+        console.error('Quest template create error:', error);
+        return res.redirect('/admin/quests?error=퀘스트 생성 중 오류가 발생했습니다');
+    }
+
+    res.redirect('/admin/quests?success=퀘스트가 생성되었습니다');
+});
+
+// 퀘스트 템플릿 수정
+const updateQuestTemplate = asyncHandler(async (req, res) => {
+    const { quest_template_id } = req.params;
+    const { scope, type, title, condition, reward_points, is_default, is_active } = req.body;
+
+    // condition JSON 파싱
+    let parsedCondition = {};
+    try {
+        if (condition) {
+            parsedCondition = typeof condition === 'string' ? JSON.parse(condition) : condition;
+        }
+    } catch (e) {
+        return res.redirect('/admin/quests?error=조건 형식이 올바르지 않습니다');
+    }
+
+    const { error } = await supabase
+        .from('quest_template')
+        .update({
+            scope,
+            type,
+            title,
+            condition: parsedCondition,
+            reward_points: parseInt(reward_points) || 0,
+            is_default: is_default === 'on',
+            is_active: is_active === 'on',
+            updated_at: new Date().toISOString()
+        })
+        .eq('quest_template_id', quest_template_id);
+
+    if (error) {
+        console.error('Quest template update error:', error);
+        return res.redirect('/admin/quests?error=퀘스트 수정 중 오류가 발생했습니다');
+    }
+
+    res.redirect('/admin/quests?success=퀘스트가 수정되었습니다');
+});
+
+// 퀘스트 템플릿 삭제
+const deleteQuestTemplate = asyncHandler(async (req, res) => {
+    const { quest_template_id } = req.params;
+
+    // 사용 중인 퀘스트가 있는지 확인
+    const { count } = await supabase
+        .from('user_quest')
+        .select('user_quest_id', { count: 'exact', head: true })
+        .eq('quest_template_id', quest_template_id);
+
+    if (count > 0) {
+        // 사용 중이면 비활성화만
+        const { error } = await supabase
+            .from('quest_template')
+            .update({ is_active: false })
+            .eq('quest_template_id', quest_template_id);
+
+        if (error) {
+            return res.redirect('/admin/quests?error=퀘스트 비활성화 중 오류가 발생했습니다');
+        }
+        return res.redirect('/admin/quests?success=사용 중인 퀘스트라 비활성화 처리되었습니다');
+    }
+
+    const { error } = await supabase
+        .from('quest_template')
+        .delete()
+        .eq('quest_template_id', quest_template_id);
+
+    if (error) {
+        console.error('Quest template delete error:', error);
+        return res.redirect('/admin/quests?error=퀘스트 삭제 중 오류가 발생했습니다');
+    }
+
+    res.redirect('/admin/quests?success=퀘스트가 삭제되었습니다');
+});
+
+// 티어 규칙 목록
+const getTierRules = asyncHandler(async (req, res) => {
+    const { data: tiers, error } = await supabase
+        .from('tier_rule')
+        .select('*')
+        .order('tier');
+
+    if (error) {
+        console.error('Tier rule fetch error:', error);
+    }
+
+    res.render('admin/tiers', {
+        title: '티어 관리',
+        layout: 'layouts/admin',
+        activeTab: 'tiers',
+        tiers: tiers || [],
+        success: req.query.success,
+        error: req.query.error
+    });
+});
+
+// 티어 규칙 생성/수정
+const upsertTierRule = asyncHandler(async (req, res) => {
+    const { tier, min_points, name } = req.body;
+
+    const { error } = await supabase
+        .from('tier_rule')
+        .upsert({
+            tier: parseInt(tier),
+            min_points: parseInt(min_points),
+            name
+        });
+
+    if (error) {
+        console.error('Tier rule upsert error:', error);
+        return res.redirect('/admin/tiers?error=티어 저장 중 오류가 발생했습니다');
+    }
+
+    res.redirect('/admin/tiers?success=티어가 저장되었습니다');
+});
+
 module.exports = {
     getDashboard,
     getExercises,
@@ -528,5 +701,11 @@ module.exports = {
     addProfileMetric,
     removeProfileMetric,
     getUsers,
-    updateUserStatus
+    updateUserStatus,
+    getQuestTemplates,
+    createQuestTemplate,
+    updateQuestTemplate,
+    deleteQuestTemplate,
+    getTierRules,
+    upsertTierRule
 };

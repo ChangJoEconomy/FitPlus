@@ -19,7 +19,13 @@ const {
     addProfileMetric,
     removeProfileMetric,
     getUsers,
-    updateUserStatus
+    updateUserStatus,
+    getQuestTemplates,
+    createQuestTemplate,
+    updateQuestTemplate,
+    deleteQuestTemplate,
+    getTierRules,
+    upsertTierRule
 } = require('../controllers/admin');
 
 // 모든 관리자 라우트에 requireAdmin 미들웨어 적용
@@ -54,5 +60,15 @@ router.post('/scoring/:profile_id/metrics/:metric_id/delete', removeProfileMetri
 // 사용자 관리
 router.get('/users', getUsers);
 router.post('/users/:user_id/status', updateUserStatus);
+
+// 퀘스트 템플릿 관리
+router.get('/quests', getQuestTemplates);
+router.post('/quests', createQuestTemplate);
+router.post('/quests/:quest_template_id', updateQuestTemplate);
+router.post('/quests/:quest_template_id/delete', deleteQuestTemplate);
+
+// 티어 관리
+router.get('/tiers', getTierRules);
+router.post('/tiers', upsertTierRule);
 
 module.exports = router;

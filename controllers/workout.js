@@ -1,4 +1,5 @@
 const { supabase } = require('../config/db');
+const { updateQuestProgress } = require('./quest');
 
 // 자율 운동 목록 페이지
 const getFreeWorkoutPage = async (req, res, next) => {
@@ -218,7 +219,7 @@ const endWorkoutSession = async (req, res, next) => {
     try {
         const { sessionId } = req.params;
         const userId = req.user.user_id;
-        const { duration_sec, total_reps, final_score, summary_feedback, detail } = req.body;
+        const { duration_sec, total_reps, final_score, summary_feedback, detail, exercise_code, sets } = req.body;
 
         // 세션 소유자 확인 및 업데이트
         const { data: session, error } = await supabase
@@ -233,10 +234,27 @@ const endWorkoutSession = async (req, res, next) => {
             })
             .eq('session_id', sessionId)
             .eq('user_id', userId)
-            .select()
+            .select(`
+                *,
+                exercise:exercise_id (code, name)
+            `)
             .single();
 
         if (error) throw error;
+
+        // 퀘스트 진행도 업데이트
+        try {
+            await updateQuestProgress(userId, {
+                exercise_code: session.exercise?.code || exercise_code,
+                duration_sec: duration_sec || 0,
+                total_reps: total_reps || 0,
+                final_score: final_score || 0,
+                sets: sets || 1
+            });
+        } catch (questError) {
+            console.error('Quest progress update failed:', questError);
+            // 퀘스트 업데이트 실패해도 운동 완료는 성공으로 처리
+        }
 
         res.json({ success: true, session });
     } catch (error) {

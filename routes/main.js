@@ -1,7 +1,8 @@
 const express = require('express');
 const { getSignupPage, handleSignup, checkLoginId } = require('../controllers/signup');
 const { getLoginPage, handleLogin } = require('../controllers/login');
-const { requireGuest, handleLogout } = require('../middleware/auth');
+const { requireGuest, requireAuth, handleLogout } = require('../middleware/auth');
+const { getQuestPage, completeQuest, claimQuestReward, assignDailyQuests, assignWeeklyQuests } = require('../controllers/quest');
 const router = express.Router();
 
 const formatKoreanDate = () => {
@@ -39,5 +40,12 @@ router.post('/signup/check-id', checkLoginId);
 
 // 로그아웃
 router.get('/logout', handleLogout);
+
+// 퀘스트 페이지 (로그인 필요)
+router.get('/quest', requireAuth, assignDailyQuests, assignWeeklyQuests, getQuestPage);
+
+// 퀘스트 API
+router.post('/api/quest/:questId/complete', requireAuth, completeQuest);
+router.post('/api/quest/:questId/claim', requireAuth, claimQuestReward);
 
 module.exports = router;
