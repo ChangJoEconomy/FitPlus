@@ -4,12 +4,8 @@ const { getLoginPage, handleLogin } = require('../controllers/login');
 const { requireGuest, requireAuth, handleLogout } = require('../middleware/auth');
 const { getQuestPage, completeQuest, claimQuestReward, assignDailyQuests, assignWeeklyQuests } = require('../controllers/quest');
 const { getHistoryPage, getSessionDetail, getHistoryStats, deleteSession } = require('../controllers/history');
+const { getHomePage } = require('../controllers/home');
 const router = express.Router();
-
-const formatKoreanDate = () => {
-    const now = new Date();
-    return `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
-};
 
 // admin 계정은 일반 페이지로 들어가지 않게 막기
 const blockAdmin = (req, res, next) => {
@@ -19,14 +15,16 @@ const blockAdmin = (req, res, next) => {
     next();
 };
 
+// 로그인한 사용자에게만 퀘스트 할당 미들웨어 실행
+const conditionalQuestAssign = (middleware) => (req, res, next) => {
+    if (res.locals.isAuthenticated && res.locals.user) {
+        return middleware(req, res, next);
+    }
+    next();
+};
+
 router.route('/')
-    .get(blockAdmin, (req, res) => {
-        res.render('home', {
-            title: 'Home',
-            today: formatKoreanDate(),
-            activeTab: 'home'
-        });
-    });
+    .get(blockAdmin, conditionalQuestAssign(assignDailyQuests), conditionalQuestAssign(assignWeeklyQuests), getHomePage);
 
 // 로그인 (로그인한 사용자는 접근 불가)
 router.route('/login')

@@ -14,11 +14,11 @@
       </div>
       <div class="hero-metrics">
         <div>
-          <span class="metric" id="streak-count">0</span>
+          <span class="metric" id="streak-count"><%= typeof streak !== 'undefined' ? streak : 0 %></span>
           <span class="metric-label">일 연속</span>
         </div>
         <div>
-          <span class="metric" id="today-minutes">0</span>
+          <span class="metric" id="today-minutes"><%= typeof todayMinutes !== 'undefined' ? todayMinutes : 0 %></span>
           <span class="metric-label">분 오늘</span>
         </div>
       </div>
@@ -32,24 +32,37 @@
         <a href="/quest" class="ghost" style="font-size: 12px;">전체보기</a>
       </div>
       <ul class="quest-list" id="daily-quests">
-        <li>
-          <span>스쿼트 3세트 완료</span>
-          <span class="muted">0/3</span>
-        </li>
-        <li>
-          <span>오늘 15분 운동하기</span>
-          <span class="muted">0/15분</span>
-        </li>
-        <li>
-          <span>점수 75점 이상 달성</span>
-          <span class="muted">미완료</span>
-        </li>
+        <% if (typeof dailyQuests !== 'undefined' && dailyQuests.length > 0) { %>
+          <% dailyQuests.slice(0, 3).forEach(quest => { %>
+            <li class="<%= quest.status === 'DONE' || quest.progress >= quest.target ? 'completed' : '' %>">
+              <span><%= quest.title %></span>
+              <% if (quest.progressType === 'QUALITY') { %>
+                <span class="muted"><%= quest.progress >= quest.target ? '완료' : '미완료' %></span>
+              <% } else if (quest.progressType === 'HABIT') { %>
+                <span class="muted"><%= quest.progress %>/<%= quest.target %>일</span>
+              <% } else { %>
+                <span class="muted"><%= quest.progress %>/<%= quest.target %></span>
+              <% } %>
+            </li>
+          <% }); %>
+        <% } else { %>
+          <li class="empty">
+            <span class="muted">오늘의 퀘스트가 없습니다</span>
+          </li>
+        <% } %>
       </ul>
+      <% 
+        const dailyCompleted = typeof dailyQuests !== 'undefined' 
+          ? dailyQuests.filter(q => q.status === 'DONE' || q.progress >= q.target).length 
+          : 0;
+        const dailyTotal = typeof dailyQuests !== 'undefined' ? dailyQuests.length : 0;
+        const dailyProgress = dailyTotal > 0 ? Math.round((dailyCompleted / dailyTotal) * 100) : 0;
+      %>
       <div class="quest">
         <div class="progress">
-          <div class="progress-bar" style="width: 0%"></div>
+          <div class="progress-bar" style="width: <%= dailyProgress %>%"></div>
         </div>
-        <span class="quest-progress">일일 퀘스트 0/3 완료</span>
+        <span class="quest-progress">일일 퀘스트 <%= dailyCompleted %>/<%= dailyTotal %> 완료</span>
       </div>
     </div>
 
@@ -59,20 +72,37 @@
         <h3>📊 주간 목표</h3>
       </div>
       <ul class="quest-list" id="weekly-quests">
-        <li>
-          <span>이번 주 5일 운동</span>
-          <span class="muted">0/5일</span>
-        </li>
-        <li>
-          <span>총 운동시간 60분</span>
-          <span class="muted">0/60분</span>
-        </li>
+        <% if (typeof weeklyQuests !== 'undefined' && weeklyQuests.length > 0) { %>
+          <% weeklyQuests.slice(0, 3).forEach(quest => { %>
+            <li class="<%= quest.status === 'DONE' || quest.progress >= quest.target ? 'completed' : '' %>">
+              <span><%= quest.title %></span>
+              <% if (quest.progressType === 'QUALITY') { %>
+                <span class="muted"><%= quest.progress >= quest.target ? '완료' : '미완료' %></span>
+              <% } else if (quest.progressType === 'HABIT') { %>
+                <span class="muted"><%= quest.progress %>/<%= quest.target %>일</span>
+              <% } else { %>
+                <span class="muted"><%= quest.progress %>/<%= quest.target %></span>
+              <% } %>
+            </li>
+          <% }); %>
+        <% } else { %>
+          <li class="empty">
+            <span class="muted">주간 퀘스트가 없습니다</span>
+          </li>
+        <% } %>
       </ul>
+      <% 
+        const weeklyCompleted = typeof weeklyQuests !== 'undefined' 
+          ? weeklyQuests.filter(q => q.status === 'DONE' || q.progress >= q.target).length 
+          : 0;
+        const weeklyTotal = typeof weeklyQuests !== 'undefined' ? weeklyQuests.length : 0;
+        const weeklyProgress = weeklyTotal > 0 ? Math.round((weeklyCompleted / weeklyTotal) * 100) : 0;
+      %>
       <div class="quest">
         <div class="progress">
-          <div class="progress-bar" style="width: 0%"></div>
+          <div class="progress-bar" style="width: <%= weeklyProgress %>%"></div>
         </div>
-        <span class="quest-progress">주간 퀘스트 0/2 완료</span>
+        <span class="quest-progress">주간 퀘스트 <%= weeklyCompleted %>/<%= weeklyTotal %> 완료</span>
       </div>
     </div>
   </div>
@@ -86,17 +116,17 @@
         <a href="/routine" class="ghost" style="font-size: 12px;">루틴 관리</a>
       </div>
       <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
-        <div class="pill-list" id="quick-routines">
-          <div class="pill" onclick="startRoutine('default')">
-            🏋️ 전신 운동 A
+        <% if (typeof routines !== 'undefined' && routines.length > 0) { %>
+          <div class="pill-list" id="quick-routines">
+            <% routines.forEach(routine => { %>
+              <div class="pill" onclick="startRoutine('<%= routine.routine_id %>')">
+                🏋️ <%= routine.name %>
+              </div>
+            <% }); %>
           </div>
-          <div class="pill" onclick="startRoutine('default')">
-            🦵 하체 집중
-          </div>
-          <div class="pill" onclick="startRoutine('default')">
-            💪 상체 루틴
-          </div>
-        </div>
+        <% } else { %>
+          <p class="muted">아직 루틴이 없습니다. 새 루틴을 만들어보세요!</p>
+        <% } %>
         <p class="card-note">
           <a href="/routine/new">+ 새 루틴 만들기</a>
         </p>
@@ -113,18 +143,18 @@
       </div>
       <p class="muted">원하는 운동 하나를 선택해서 자유롭게 운동하세요</p>
       <div class="chip-grid" id="exercise-chips">
-        <div class="chip" onclick="startFreeWorkout('squat')">
-          🏋️ 스쿼트
-        </div>
-        <div class="chip" onclick="startFreeWorkout('pushup')">
-          💪 푸시업
-        </div>
-        <div class="chip" onclick="startFreeWorkout('lunge')">
-          🦵 런지
-        </div>
-        <div class="chip" onclick="startFreeWorkout('plank')">
-          🧘 플랭크
-        </div>
+        <% if (typeof exercises !== 'undefined' && exercises.length > 0) { %>
+          <% exercises.forEach(exercise => { %>
+            <div class="chip" onclick="startFreeWorkout('<%= exercise.code.toLowerCase() %>')">
+              <%= exercise.emoji %> <%= exercise.name %>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <div class="chip" onclick="startFreeWorkout('squat')">🏋️ 스쿼트</div>
+          <div class="chip" onclick="startFreeWorkout('pushup')">💪 푸시업</div>
+          <div class="chip" onclick="startFreeWorkout('lunge')">🦵 런지</div>
+          <div class="chip" onclick="startFreeWorkout('plank')">🧘 플랭크</div>
+        <% } %>
       </div>
       <a href="/workout/free" class="ghost full" style="margin-top: 8px;">
         전체 운동 보기 →
@@ -141,8 +171,14 @@
         <a href="/history" class="ghost" style="font-size: 12px;">더보기</a>
       </div>
       <div class="streak-grid" id="streak-grid">
-        <% for (let i = 0; i < 28; i++) { %>
-          <div class="streak"></div>
+        <% if (typeof activityDays !== 'undefined' && activityDays.length > 0) { %>
+          <% activityDays.forEach(day => { %>
+            <div class="streak <%= day.hasWorkout ? 'active' : '' %>" title="<%= day.date %>"></div>
+          <% }); %>
+        <% } else { %>
+          <% for (let i = 0; i < 28; i++) { %>
+            <div class="streak"></div>
+          <% } %>
         <% } %>
       </div>
       <p class="muted">최근 4주간 운동 기록</p>
@@ -153,15 +189,20 @@
       <div class="card-header">
         <h3>🏆 나의 티어</h3>
       </div>
-      <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
+      <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated && typeof tierInfo !== 'undefined' && tierInfo) { %>
         <div style="display: flex; align-items: center; gap: 16px;">
-          <div style="font-size: 48px;">🥉</div>
+          <div style="font-size: 48px;"><%= tierInfo.emoji %></div>
           <div>
-            <div style="font-weight: 700; font-size: 20px;">브론즈</div>
-            <p class="muted">다음 티어까지 150점 남음</p>
+            <div style="font-weight: 700; font-size: 20px;"><%= tierInfo.name %></div>
+            <% if (tierInfo.nextTierName) { %>
+              <p class="muted">다음 티어까지 <%= tierInfo.pointsToNext %>점 남음</p>
+            <% } else { %>
+              <p class="muted">최고 티어 달성! 🎉</p>
+            <% } %>
             <div class="progress" style="width: 200px; margin-top: 8px;">
-              <div class="progress-bar" style="width: 30%"></div>
+              <div class="progress-bar" style="width: <%= tierInfo.progress %>%"></div>
             </div>
+            <p class="muted" style="font-size: 12px; margin-top: 4px;">현재 <%= tierInfo.points %>점</p>
           </div>
         </div>
       <% } else { %>
@@ -179,13 +220,62 @@
     </div>
     <p class="muted">정확한 자세를 배우고 부상 없이 운동하세요. 튜토리얼을 완료하면 보너스 점수를 받을 수 있어요!</p>
     <div class="pill-list">
-      <span class="pill small">🏋️ 스쿼트 기초</span>
-      <span class="pill small">💪 푸시업 기초</span>
-      <span class="pill small">🦵 런지 기초</span>
-      <span class="pill small">🧘 플랭크 기초</span>
+      <% if (typeof exercises !== 'undefined' && exercises.length > 0) { %>
+        <% exercises.forEach(exercise => { %>
+          <span class="pill small"><%= exercise.emoji %> <%= exercise.name %> 기초</span>
+        <% }); %>
+      <% } else { %>
+        <span class="pill small">🏋️ 스쿼트 기초</span>
+        <span class="pill small">💪 푸시업 기초</span>
+        <span class="pill small">🦵 런지 기초</span>
+        <span class="pill small">🧘 플랭크 기초</span>
+      <% } %>
     </div>
   </div>
 </div>
+
+<style>
+.quest-list li.completed span:first-child {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.quest-list li.completed::before {
+  content: '✓';
+  color: var(--color-success);
+  margin-right: 8px;
+  font-weight: bold;
+}
+
+.quest-list li.empty {
+  justify-content: center;
+  padding: 16px;
+}
+
+.streak-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.streak {
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 20px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.streak.active {
+  background: var(--color-primary, #10b981);
+}
+
+.streak:hover {
+  transform: scale(1.1);
+}
+</style>
 
 <script>
   // 루틴 시작
