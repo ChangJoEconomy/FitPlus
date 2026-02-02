@@ -18,9 +18,6 @@
     <div class="grid three">
       <% exercises.forEach(exercise => { %>
         <div class="card exercise-card">
-          <div class="exercise-icon">
-            <%= exercise.code.toUpperCase().slice(0, 2) %>
-          </div>
           <h3><%= exercise.name %></h3>
           <p class="muted"><%= exercise.description || '운동 설명이 없습니다' %></p>
           <a href="/workout/free/<%= exercise.code %>" class="primary full">
@@ -38,8 +35,8 @@
     align-items: center;
   }
 
-  .exercise-icon {
-    font-size: 48px;
+  .exercise-card h3 {
+    font-size: 1.5rem;
     margin-bottom: 8px;
   }
 </style>
