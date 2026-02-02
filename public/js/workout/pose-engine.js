@@ -143,6 +143,10 @@ class PoseEngine {
     this.lastResults = results;
 
     if (!results.poseLandmarks) {
+      // 사람 미감지 콜백
+      if (this.onNoPerson) {
+        this.onNoPerson();
+      }
       return;
     }
 

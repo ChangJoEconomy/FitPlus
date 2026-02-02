@@ -229,6 +229,7 @@
 
         // 4. PoseEngine 콜백 설정
         poseEngine.onPoseDetected = handlePoseDetected;
+        poseEngine.onNoPerson = handleNoPerson;
 
         console.log('[Session] AI 엔진 초기화 완료');
         return true;
@@ -416,6 +417,34 @@ cameraOverlay.innerHTML = cameraReadyHtml;
       }
     }
 
+    // 사람 미감지 처리
+    let noPersonCount = 0;
+    const NO_PERSON_THRESHOLD = 30; // 30프레임 이상 감지 안되면 이벤트 기록
+    
+    function handleNoPerson() {
+      if (state.phase !== 'WORKING' || state.isPaused) return;
+      
+      noPersonCount++;
+      
+      // 연속으로 감지 안될 때만 기록 (중복 방지)
+      if (noPersonCount === NO_PERSON_THRESHOLD) {
+        if (sessionBuffer) {
+          sessionBuffer.addEvent('NO_PERSON', { 
+            duration: noPersonCount,
+            message: '카메라에 사람이 감지되지 않습니다'
+          });
+        }
+        showAlert('감지 안됨', '카메라에 전신이 보이도록 해주세요');
+      }
+    }
+    
+    // 포즈가 감지되면 카운터 리셋
+    const originalHandlePoseDetected = handlePoseDetected;
+    handlePoseDetected = function(poseData) {
+      noPersonCount = 0; // 감지되면 리셋
+      originalHandlePoseDetected(poseData);
+    };
+
     function aggregateScores(scores) {
       if (!scores || scores.length === 0) return 0;
       const sorted = scores
@@ -498,6 +527,13 @@ cameraOverlay.innerHTML = cameraReadyHtml;
       // 버퍼에 기록
       if (sessionBuffer) {
         sessionBuffer.addRep(repRecord);
+        
+        // REP_COMPLETE 이벤트 기록
+        sessionBuffer.addEvent('REP_COMPLETE', {
+          repNumber: repRecord.repNumber,
+          score: repRecord.score,
+          duration: repRecord.duration
+        });
       }
 
       // 루틴 모드 체크
@@ -586,6 +622,16 @@ cameraOverlay.innerHTML = cameraReadyHtml;
 
       if (lowScoreItem) {
         showAlert('자세 교정 필요', lowScoreItem.feedback);
+        
+        // 이벤트 기록
+        if (sessionBuffer) {
+          sessionBuffer.addEvent('LOW_SCORE_HINT', {
+            metric_key: lowScoreItem.key,
+            score: lowScoreItem.score,
+            maxScore: lowScoreItem.maxScore,
+            feedback: lowScoreItem.feedback
+          });
+        }
       }
     }
 

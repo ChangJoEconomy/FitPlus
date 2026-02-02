@@ -58,10 +58,15 @@ class SessionBuffer {
             this.metricAccumulators[item.key] = {
               metric_id: item.metric_id,
               scores: [],
+              rawValues: [],
               feedbackCount: 0
             };
           }
           this.metricAccumulators[item.key].scores.push(item.score);
+          // 원본 각도값 누적
+          if (item.actualValue != null && Number.isFinite(item.actualValue)) {
+            this.metricAccumulators[item.key].rawValues.push(item.actualValue);
+          }
           if (item.feedback) {
             this.metricAccumulators[item.key].feedbackCount++;
           }
@@ -220,15 +225,18 @@ class SessionBuffer {
           data.scores.reduce((a, b) => a + b, 0) / data.scores.length
         );
         
+        // 원본 각도값 평균 계산
+        let avgRaw = null;
+        if (data.rawValues && data.rawValues.length > 0) {
+          avgRaw = Math.round(
+            data.rawValues.reduce((a, b) => a + b, 0) / data.rawValues.length
+          );
+        }
+        
         results.push({
           metric_id: data.metric_id,
           score: avgScore,
-          raw: {
-            sampleCount: data.scores.length,
-            feedbackCount: data.feedbackCount,
-            minScore: Math.min(...data.scores),
-            maxScore: Math.max(...data.scores)
-          }
+          raw: avgRaw
         });
       }
     }
@@ -242,6 +250,14 @@ class SessionBuffer {
   export() {
     const finalScore = this.calculateFinalScore();
     
+    // 세트 기록이 없으면 기본 1세트 생성
+    const setRecords = this.setRecords.length > 0 ? this.setRecords : [{
+      set_no: 1,
+      phase: 'WORK',
+      actual_reps: this.getTotalReps(),
+      duration_sec: this.getDuration()
+    }];
+    
     return {
       // 기본 세션 정보
       duration_sec: this.getDuration(),
@@ -253,17 +269,19 @@ class SessionBuffer {
       detail: {
         score_timeline: this.scoreTimeline,
         rep_records: this.repRecords,
-        set_records: this.setRecords,
+        set_records: setRecords,
         events: this.events,
         stats: {
           avg_rep_score: this.calculateAvgRepScore(),
           best_rep: this.getBestRep(),
-          total_sets: this.setRecords.length || 1
+          total_sets: setRecords.length
         }
       },
       
-      // 메트릭 결과 (별도 테이블)
-      metric_results: this.generateMetricResults()
+      // 별도 테이블용 데이터 (서버에서 처리)
+      metric_results: this.generateMetricResults(),
+      set_records: setRecords,
+      events: this.events
     };
   }
 

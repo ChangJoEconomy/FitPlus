@@ -219,7 +219,18 @@ const endWorkoutSession = async (req, res, next) => {
     try {
         const { sessionId } = req.params;
         const userId = req.user.user_id;
-        const { duration_sec, total_reps, final_score, summary_feedback, detail, exercise_code, sets } = req.body;
+        const { 
+            duration_sec, 
+            total_reps, 
+            final_score, 
+            summary_feedback, 
+            detail, 
+            exercise_code, 
+            sets,
+            metric_results,
+            set_records,
+            events
+        } = req.body;
 
         // 세션 소유자 확인 및 업데이트
         const { data: session, error } = await supabase
@@ -241,6 +252,98 @@ const endWorkoutSession = async (req, res, next) => {
             .single();
 
         if (error) throw error;
+
+        // 메트릭 결과 저장 (session_metric_result)
+        if (metric_results && Array.isArray(metric_results) && metric_results.length > 0) {
+            const metricData = metric_results.map(m => ({
+                session_id: sessionId,
+                metric_id: m.metric_id,
+                score: m.score || 0,
+                raw: m.raw != null ? Math.round(m.raw) : null // 원본 각도값 (정수)
+            })).filter(m => m.metric_id); // metric_id가 있는 것만
+
+            if (metricData.length > 0) {
+                const { error: metricError } = await supabase
+                    .from('session_metric_result')
+                    .insert(metricData);
+                
+                if (metricError) {
+                    console.error('Metric result insert error:', metricError);
+                }
+            }
+        }
+
+        // 세트 기록 저장 (workout_set)
+        if (set_records && Array.isArray(set_records) && set_records.length > 0) {
+            const setData = set_records.map(s => ({
+                session_id: sessionId,
+                set_no: s.set_no || 1,
+                phase: s.phase || 'WORK',
+                target_reps: s.target_reps || null,
+                actual_reps: s.actual_reps || 0,
+                duration_sec: s.duration_sec || null
+            }));
+
+            const { error: setError } = await supabase
+                .from('workout_set')
+                .insert(setData);
+            
+            if (setError) {
+                console.error('Workout set insert error:', setError);
+            }
+        } else {
+            // 세트 기록이 없으면 기본 1세트로 저장
+            const { error: setError } = await supabase
+                .from('workout_set')
+                .insert({
+                    session_id: sessionId,
+                    set_no: 1,
+                    phase: 'WORK',
+                    actual_reps: total_reps || 0,
+                    duration_sec: duration_sec || null
+                });
+            
+            if (setError) {
+                console.error('Default workout set insert error:', setError);
+            }
+        }
+
+        // 이벤트 기록 저장 (session_event)
+        if (events && Array.isArray(events) && events.length > 0) {
+            const eventData = events.map(e => ({
+                session_id: sessionId,
+                type: e.type,
+                payload: e.payload || null,
+                event_time: new Date(session.started_at.getTime ? 
+                    session.started_at.getTime() + e.timestamp : 
+                    new Date(session.started_at).getTime() + e.timestamp
+                ).toISOString()
+            }));
+
+            const { error: eventError } = await supabase
+                .from('session_event')
+                .insert(eventData);
+            
+            if (eventError) {
+                console.error('Session event insert error:', eventError);
+            }
+        }
+
+        // 루틴 인스턴스 상태 업데이트
+        if (session.routine_instance_id) {
+            const { error: riError } = await supabase
+                .from('routine_instance')
+                .update({
+                    ended_at: new Date().toISOString(),
+                    status: 'DONE',
+                    total_score: final_score || 0
+                })
+                .eq('routine_instance_id', session.routine_instance_id);
+            
+            if (riError) {
+                console.error('Routine instance update error:', riError);
+            }
+        }
 
         // 퀘스트 진행도 업데이트
         try {
