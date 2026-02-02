@@ -310,18 +310,18 @@
   }
 
   .quest-type.do {
-    background: #dbeafe;
-    color: #1d4ed8;
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
   }
 
   .quest-type.quality {
-    background: #fef3c7;
-    color: #b45309;
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
   }
 
   .quest-type.habit {
-    background: #ede9fe;
-    color: #7c3aed;
+    background: rgba(139, 92, 246, 0.15);
+    color: #8b5cf6;
   }
 
   .quest-reward {
@@ -364,7 +364,7 @@
   }
 
   .empty-state {
-    background: #f8fafc;
+    background: var(--card);
     border: 2px dashed var(--border);
     border-radius: 16px;
     padding: 40px;
@@ -394,7 +394,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: #f8fafc;
+    background: var(--input-bg);
     border-radius: 12px;
   }
 
@@ -461,14 +461,14 @@
     align-items: center;
     gap: 8px;
     padding: 12px 16px;
-    background: #f8fafc;
+    background: var(--input-bg);
     border-radius: 12px;
     border: 2px solid transparent;
     transition: all 0.2s ease;
   }
 
   .tier-item.current {
-    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    background: linear-gradient(135deg, rgba(91, 108, 255, 0.15) 0%, rgba(91, 108, 255, 0.25) 100%);
     border-color: var(--primary);
   }
 
@@ -498,7 +498,7 @@
     align-items: center;
     gap: 8px;
     padding: 16px;
-    background: #f8fafc;
+    background: var(--input-bg);
     border-radius: 12px;
     text-decoration: none;
     color: var(--text);
@@ -506,7 +506,7 @@
   }
 
   .quick-action-btn:hover {
-    background: #eef2ff;
+    background: var(--tab-bg);
     transform: translateY(-2px);
     text-decoration: none;
   }

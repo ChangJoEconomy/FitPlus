@@ -94,7 +94,7 @@
             </tbody>
         </table>
         
-        <div style="margin-top: 16px; padding: 16px; background: #f8fafc; border-radius: 8px;">
+        <div style="margin-top: 16px; padding: 16px; background: var(--input-bg, #f8fafc); border-radius: 8px;">
             <strong>총 가중치:</strong> 
             <% const totalWeight = profileMetrics.reduce((sum, pm) => sum + parseFloat(pm.weight), 0); %>
             <span class="<%= Math.abs(totalWeight - 1) < 0.01 ? 'badge badge-success' : 'badge badge-danger' %>">

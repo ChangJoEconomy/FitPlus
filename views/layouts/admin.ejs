@@ -30,6 +30,12 @@
           <div class="logo">FitPlus <span class="admin-badge">Admin</span></div>
         </div>
         <div class="profile-area">
+          <div class="theme-toggle-wrapper">
+            <button class="theme-toggle-btn" id="themeToggle" title="테마 전환">
+              <span class="theme-icon light-icon">☀️</span>
+              <span class="theme-icon dark-icon">🌙</span>
+            </button>
+          </div>
           <a class="auth-btn logout-btn" href="/logout">로그아웃</a>
         </div>
       </header>
@@ -78,5 +84,38 @@
         </main>
       </div>
     </div>
+    
+    <script>
+      // 테마 토글 기능
+      document.addEventListener('DOMContentLoaded', () => {
+        const themeToggle = document.getElementById('themeToggle');
+        
+        function updateToggleState() {
+          const currentTheme = document.documentElement.getAttribute('data-theme');
+          themeToggle.classList.toggle('dark', currentTheme === 'dark');
+        }
+        
+        updateToggleState();
+        
+        themeToggle.addEventListener('click', async () => {
+          const currentTheme = document.documentElement.getAttribute('data-theme');
+          const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+          
+          document.documentElement.setAttribute('data-theme', newTheme);
+          updateToggleState();
+          
+          // 서버에 테마 저장
+          try {
+            await fetch('/settings/theme', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ theme: newTheme })
+            });
+          } catch (err) {
+            console.error('테마 저장 실패:', err);
+          }
+        });
+      });
+    </script>
   </body>
 </html>

@@ -420,8 +420,8 @@ body {
 }
 
 .chip {
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
+  background: var(--tab-bg);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px;
   cursor: pointer;
@@ -436,7 +436,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f8fafc;
+  background: var(--input-bg);
   border-radius: 12px;
   padding: 12px 14px;
 }
@@ -450,10 +450,10 @@ body {
   border-radius: 14px;
   background: repeating-linear-gradient(
     135deg,
-    #f1f5f9,
-    #f1f5f9 10px,
-    #e2e8f0 10px,
-    #e2e8f0 20px
+    var(--ghost-bg),
+    var(--ghost-bg) 10px,
+    var(--ghost-hover) 10px,
+    var(--ghost-hover) 20px
   );
   display: grid;
   place-items: center;
@@ -478,7 +478,7 @@ body {
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  background: #e2e8f0;
+  background: var(--border);
 }
 
 .streak.on {
@@ -498,8 +498,8 @@ body {
 }
 
 .exercise-list li.selected {
-  background: #eef2ff;
-  border-color: #c7d2fe;
+  background: var(--tab-bg);
+  border-color: var(--primary);
 }
 
 .requirement-list {
@@ -510,7 +510,7 @@ body {
 .requirement-list li {
   padding: 10px 12px;
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--input-bg);
   border: 1px dashed var(--border);
 }
 
@@ -608,7 +608,7 @@ body {
 .detail-list li {
   display: flex;
   justify-content: space-between;
-  background: #f8fafc;
+  background: var(--input-bg);
   border-radius: 12px;
   padding: 10px 12px;
 }
@@ -1037,6 +1037,107 @@ body {
 
 [data-theme="dark"] .field-message .success {
   color: #4ade80;
+}
+
+/* ========== 다크 테마: 히스토리 & 퀘스트 페이지 ========== */
+
+/* 공통 요소 */
+[data-theme="dark"] .stat {
+  background: var(--card);
+}
+
+[data-theme="dark"] .empty-state {
+  background: var(--card);
+}
+
+[data-theme="dark"] .chip {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+/* 히스토리 페이지 */
+[data-theme="dark"] .filter-group select {
+  background: var(--input-bg);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .filter-group select option {
+  background: var(--card);
+  color: var(--text);
+}
+
+[data-theme="dark"] .history-actions .ghost:hover {
+  background: var(--ghost-hover);
+}
+
+[data-theme="dark"] .detail-item {
+  background: var(--input-bg);
+}
+
+[data-theme="dark"] .metric-item {
+  background: var(--input-bg);
+}
+
+[data-theme="dark"] .score-circle {
+  background: var(--input-bg);
+}
+
+[data-theme="dark"] .detail-list li {
+  background: var(--input-bg);
+}
+
+/* 퀘스트 페이지 */
+[data-theme="dark"] .quest-card.completed {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.15) 100%);
+  border-color: rgba(134, 239, 172, 0.4);
+}
+
+[data-theme="dark"] .quest-type.do {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .quest-type.quality {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .quest-type.habit {
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .point-record {
+  background: var(--input-bg);
+}
+
+[data-theme="dark"] .tier-item {
+  background: var(--input-bg);
+}
+
+[data-theme="dark"] .tier-item.current {
+  background: linear-gradient(135deg, rgba(91, 108, 255, 0.15) 0%, rgba(91, 108, 255, 0.25) 100%);
+}
+
+[data-theme="dark"] .quick-action-btn {
+  background: var(--input-bg);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+[data-theme="dark"] .quick-action-btn:hover {
+  background: var(--ghost-hover);
+}
+
+[data-theme="dark"] .history-mode.free {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .history-mode.routine {
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
 }
 
 @media (max-width: 600px) {
