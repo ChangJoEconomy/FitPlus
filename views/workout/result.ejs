@@ -1,7 +1,7 @@
 <div class="page active">
   <section class="page-header">
     <div>
-      <h1>운동 완료! 🎉</h1>
+      <h1>운동 완료!</h1>
       <p class="muted"><%= session.exercise.name %> - <%= session.mode === 'ROUTINE' ? '루틴' : '자율' %> 운동</p>
     </div>
     <div class="actions">
@@ -18,17 +18,17 @@
         <p><%= session.summary_feedback || '운동을 완료했습니다!' %></p>
       </div>
       <% if (session.final_score >= 80) { %>
-        <span class="badge" style="background: #22c55e;">🌟 훌륭해요!</span>
+<span class="badge" style="background: #22c55e;">훈륭해요!</span>
       <% } else if (session.final_score >= 60) { %>
-        <span class="badge" style="background: #eab308;">👍 좋아요!</span>
+        <span class="badge" style="background: #eab308;">좋아요!</span>
       <% } else { %>
-        <span class="badge" style="background: #ef4444;">💪 분발하세요!</span>
+        <span class="badge" style="background: #ef4444;">분발하세요!</span>
       <% } %>
     </div>
 
     <!-- 운동 요약 -->
     <div class="card">
-      <h3>📊 운동 요약</h3>
+      <h3>운동 요약</h3>
       <div class="stat-list">
         <div class="stat">
           <span>운동 시간</span>
@@ -60,7 +60,7 @@
   <% if (session.session_metric_result && session.session_metric_result.length > 0) { %>
     <div class="card">
       <div class="card-header">
-        <h3>📈 세부 점수</h3>
+        <h3>세부 점수</h3>
         <span class="muted">각 평가 항목별 점수</span>
       </div>
       <ul class="detail-list">
@@ -77,7 +77,7 @@
   <!-- 오늘의 운동 요약 -->
   <div class="card">
     <div class="card-header">
-      <h3>📅 오늘의 운동</h3>
+      <h3>오늘의 운동</h3>
     </div>
     <div class="stat-list">
       <div class="stat">

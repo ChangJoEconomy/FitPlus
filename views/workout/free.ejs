@@ -19,17 +19,12 @@
       <% exercises.forEach(exercise => { %>
         <div class="card exercise-card">
           <div class="exercise-icon">
-            <% if (exercise.code === 'squat') { %>🏋️
-            <% } else if (exercise.code === 'pushup') { %>💪
-            <% } else if (exercise.code === 'lunge') { %>🦵
-            <% } else if (exercise.code === 'plank') { %>🧘
-            <% } else { %>🏃
-            <% } %>
+            <%= exercise.code.toUpperCase().slice(0, 2) %>
           </div>
           <h3><%= exercise.name %></h3>
           <p class="muted"><%= exercise.description || '운동 설명이 없습니다' %></p>
           <a href="/workout/free/<%= exercise.code %>" class="primary full">
-            ▶️ 시작하기
+            시작하기
           </a>
         </div>
       <% }); %>

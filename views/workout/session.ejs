@@ -33,7 +33,7 @@
       </div>
 
       <div class="workout-actions">
-        <button class="ghost" onclick="confirmExit()">✕ 종료</button>
+        <button class="ghost" onclick="confirmExit()">X 종료</button>
       </div>
     </header>
 
@@ -52,14 +52,14 @@
           <video id="videoElement" autoplay playsinline></video>
           <canvas id="poseCanvas"></canvas>
           <div class="camera-overlay" id="cameraOverlay">
-            <p>📷 카메라를 연결 중...</p>
+            <p>카메라를 연결 중...</p>
           </div>
         </div>
 
         <!-- 카메라 컨트롤 -->
         <div class="camera-actions" id="cameraActions">
           <button class="primary" id="startBtn" onclick="startWorkout()">
-            ▶️ 운동 시작
+            운동 시작
           </button>
         </div>
       </div>
@@ -116,12 +116,12 @@
         <!-- 컨트롤 버튼 -->
         <div class="control-row">
           <button class="ghost full" id="pauseBtn" onclick="togglePause()" disabled>
-            ⏸️ 일시정지
+            일시정지
           </button>
         </div>
         <div class="control-row">
           <button class="primary full" id="finishBtn" onclick="finishWorkout()" disabled>
-            ✅ 운동 종료
+            운동 종료
           </button>
         </div>
       </aside>
@@ -209,12 +209,12 @@
     const startBtn = document.getElementById('startBtn');
     const pauseBtn = document.getElementById('pauseBtn');
     const finishBtn = document.getElementById('finishBtn');
-    const cameraReadyHtml = '<p>✅ 준비 완료</p><p class="muted">전신이 잘 보이도록 위치를 조정하세요</p>';
+    const cameraReadyHtml = '<p>준비 완료</p><p class="muted">전신이 잘 보이도록 위치를 조정하세요</p>';
 
     // AI 엔진 초기화
     async function initAIEngines() {
       try {
-        cameraOverlay.innerHTML = '<p>🤖 AI 엔진 로딩 중...</p>';
+        cameraOverlay.innerHTML = '<p>AI 엔진 로딩 중...</p>';
 
         // 1. PoseEngine 초기화
         poseEngine = new PoseEngine();
@@ -234,7 +234,7 @@
         return true;
       } catch (error) {
         console.error('[Session] AI 엔진 초기화 실패:', error);
-        cameraOverlay.innerHTML = '<p>❌ AI 엔진 로딩 실패</p><p class="muted">페이지를 새로고침해주세요</p>';
+        cameraOverlay.innerHTML = '<p>AI 엔진 로딩 실패</p><p class="muted">페이지를 새로고침해주세요</p>';
         return false;
       }
     }
@@ -242,7 +242,7 @@
     // 카메라 초기화
     async function initCamera() {
       try {
-        cameraOverlay.innerHTML = '<p>📷 카메라를 연결 중...</p>';
+        cameraOverlay.innerHTML = '<p>카메라를 연결 중...</p>';
 
         // AI 엔진 먼저 초기화
         const aiReady = await initAIEngines();
@@ -269,7 +269,7 @@
           poseCanvas.height = videoElement.videoHeight;
         };
 
-        cameraOverlay.innerHTML = cameraReadyHtml;
+cameraOverlay.innerHTML = cameraReadyHtml;
         startBtn.disabled = false;
 
       } catch (error) {
@@ -285,10 +285,10 @@
             poseCanvas.width = videoElement.videoWidth;
             poseCanvas.height = videoElement.videoHeight;
           };
-          cameraOverlay.innerHTML = '<p>✅ 화면 캡처 모드</p><p class="muted">개발용 모드입니다</p>';
+          cameraOverlay.innerHTML = '<p>화면 캡처 모드</p><p class="muted">개발용 모드입니다</p>';
           startBtn.disabled = false;
         } catch (e) {
-          cameraOverlay.innerHTML = '<p>❌ 카메라 연결 실패</p><p class="muted">카메라 권한을 확인해주세요</p>';
+          cameraOverlay.innerHTML = '<p>카메라 연결 실패</p><p class="muted">카메라 권한을 확인해주세요</p>';
         }
       }
     }
@@ -665,13 +665,13 @@
       if (state.isPaused) {
         state.phase = 'PAUSED';
         updateStatus('paused', '일시정지');
-        pauseBtn.innerHTML = '▶️ 계속하기';
+        pauseBtn.innerHTML = '계속하기';
         if (poseEngine) poseEngine.stop();
         if (sessionBuffer) sessionBuffer.addEvent('PAUSE');
       } else {
         state.phase = 'WORKING';
         updateStatus('running', '운동 중');
-        pauseBtn.innerHTML = '⏸️ 일시정지';
+        pauseBtn.innerHTML = '일시정지';
         if (poseEngine) poseEngine.start();
         if (sessionBuffer) sessionBuffer.addEvent('RESUME');
       }

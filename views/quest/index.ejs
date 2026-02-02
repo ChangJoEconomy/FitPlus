@@ -1,7 +1,7 @@
 <div class="page active">
   <section class="page-header">
     <div>
-      <h1>🎯 퀘스트</h1>
+      <h1>퀘스트</h1>
       <p class="muted">미션을 완료하고 포인트를 모아보세요!</p>
     </div>
   </section>
@@ -10,7 +10,7 @@
     <!-- 포인트 & 티어 카드 -->
     <div class="card hero">
       <div class="card-header">
-        <h3>💎 나의 포인트</h3>
+        <h3>나의 포인트</h3>
       </div>
       <div class="hero-metrics">
         <div>
@@ -23,7 +23,7 @@
         <% if (nextTier) { %>
           <p class="tier-progress">다음 티어까지 <strong><%= (nextTier.min_points - totalPoints).toLocaleString() %>P</strong></p>
         <% } else { %>
-          <p class="tier-progress">최고 티어 달성! 🏆</p>
+          <p class="tier-progress">최고 티어 달성!</p>
         <% } %>
       </div>
     </div>
@@ -31,7 +31,7 @@
     <!-- 오늘의 운동 현황 -->
     <div class="card">
       <div class="card-header">
-        <h3>📊 오늘의 현황</h3>
+        <h3>오늘의 현황</h3>
       </div>
       <div class="stat-list">
         <div class="stat">
@@ -48,15 +48,13 @@
     <!-- 빠른 액션 -->
     <div class="card">
       <div class="card-header">
-        <h3>⚡ 빠른 시작</h3>
+        <h3>빠른 시작</h3>
       </div>
       <div class="quick-actions">
         <a href="/workout/free" class="quick-action-btn">
-          <span class="quick-icon">🏋️</span>
           <span>자율 운동</span>
         </a>
         <a href="/routine" class="quick-action-btn">
-          <span class="quick-icon">📋</span>
           <span>루틴 운동</span>
         </a>
       </div>
@@ -66,7 +64,7 @@
   <!-- 일일 퀘스트 섹션 -->
   <div class="quest-section">
     <div class="section-header">
-      <h2>📋 일일 퀘스트</h2>
+      <h2>일일 퀘스트</h2>
       <span class="quest-summary">
         <%= dailyQuests.filter(q => q.status === 'DONE').length %>/<%= dailyQuests.length %> 완료
       </span>
@@ -90,7 +88,7 @@
             <h4 class="quest-title"><%= quest.quest_template.title %></h4>
             <% if (quest.status === 'DONE') { %>
               <div class="quest-status completed">
-                <span>✅ 완료!</span>
+                <span>완료!</span>
               </div>
             <% } else { %>
               <div class="quest-progress-bar">
@@ -109,7 +107,7 @@
               </div>
               <% if (canClaim) { %>
                 <button class="claim-btn" onclick="claimQuest('<%= quest.user_quest_id %>', <%= quest.quest_template.reward_points %>)">
-                  🎁 보상 받기
+                  보상 받기
                 </button>
               <% } %>
             <% } %>
@@ -122,7 +120,7 @@
   <!-- 주간 퀘스트 섹션 -->
   <div class="quest-section">
     <div class="section-header">
-      <h2>📈 주간 퀘스트</h2>
+      <h2>주간 퀘스트</h2>
       <span class="quest-summary">
         <%= weeklyQuests.filter(q => q.status === 'DONE').length %>/<%= weeklyQuests.length %> 완료
       </span>
@@ -146,7 +144,7 @@
             <h4 class="quest-title"><%= quest.quest_template.title %></h4>
             <% if (quest.status === 'DONE') { %>
               <div class="quest-status completed">
-                <span>✅ 완료!</span>
+                <span>완료!</span>
               </div>
             <% } else { %>
               <div class="quest-progress-bar">
@@ -165,7 +163,7 @@
               </div>
               <% if (canClaim) { %>
                 <button class="claim-btn weekly" onclick="claimQuest('<%= quest.user_quest_id %>', <%= quest.quest_template.reward_points %>)">
-                  🎁 보상 받기
+                  보상 받기
                 </button>
               <% } %>
             <% } %>
@@ -178,7 +176,7 @@
   <!-- 포인트 히스토리 -->
   <div class="card">
     <div class="card-header">
-      <h3>📜 최근 포인트 이력</h3>
+      <h3>최근 포인트 이력</h3>
     </div>
     <% if (pointHistory.length === 0) { %>
       <p class="muted">아직 포인트 이력이 없습니다.</p>
@@ -188,9 +186,9 @@
           <li class="point-record">
             <div class="point-info">
               <span class="point-source <%= record.source_type.toLowerCase() %>">
-                <%= record.source_type === 'QUEST' ? '🎯 퀘스트' : 
-                    record.source_type === 'BONUS' ? '🎁 보너스' : 
-                    record.source_type === 'TUTORIAL' ? '📚 튜토리얼' : '⚙️ 조정' %>
+                <%= record.source_type === 'QUEST' ? '퀘스트' : 
+                    record.source_type === 'BONUS' ? '보너스' : 
+                    record.source_type === 'TUTORIAL' ? '튜토리얼' : '조정' %>
               </span>
               <span class="point-note"><%= record.note || '포인트 획득' %></span>
             </div>
@@ -206,7 +204,7 @@
   <!-- 티어 정보 -->
   <div class="card">
     <div class="card-header">
-      <h3>🏅 티어 시스템</h3>
+      <h3>티어 시스템</h3>
     </div>
     <div class="tier-list">
       <div class="tier-item <%= currentTier.tier === 1 ? 'current' : '' %>">
@@ -628,7 +626,7 @@
           const claimBtn = card.querySelector('.claim-btn');
           
           if (progressBar) {
-            progressBar.innerHTML = '<div class="quest-status completed"><span>✅ 완료!</span></div>';
+            progressBar.innerHTML = '<div class="quest-status completed"><span>완료!</span></div>';
           }
           if (claimBtn) {
             claimBtn.remove();
@@ -642,17 +640,17 @@
           pointsDisplay.textContent = (currentPoints + points).toLocaleString();
         }
 
-        showToast(`🎉 ${data.message}`, 'success');
+        showToast(`${data.message}`, 'success');
       } else {
         showToast(data.error || '오류가 발생했습니다.', 'error');
         btn.disabled = false;
-        btn.textContent = '🎁 보상 받기';
+        btn.textContent = '보상 받기';
       }
     } catch (error) {
       console.error('Claim error:', error);
       showToast('네트워크 오류가 발생했습니다.', 'error');
       btn.disabled = false;
-      btn.textContent = '🎁 보상 받기';
+      btn.textContent = '보상 받기';
     }
   }
 

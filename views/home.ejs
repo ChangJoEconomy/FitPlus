@@ -10,7 +10,7 @@
     <!-- 연속 운동 기록 카드 -->
     <div class="card hero">
       <div class="card-header">
-        <h3>🔥 나의 운동 기록</h3>
+        <h3>나의 운동 기록</h3>
       </div>
       <div class="hero-metrics">
         <div>
@@ -28,7 +28,7 @@
     <!-- 오늘의 퀘스트 -->
     <div class="card">
       <div class="card-header">
-        <h3>📋 오늘의 퀘스트</h3>
+        <h3>오늘의 퀘스트</h3>
         <a href="/quest" class="ghost" style="font-size: 12px;">전체보기</a>
       </div>
       <ul class="quest-list" id="daily-quests">
@@ -69,7 +69,7 @@
     <!-- 주간 퀘스트 -->
     <div class="card">
       <div class="card-header">
-        <h3>📊 주간 목표</h3>
+        <h3>주간 목표</h3>
       </div>
       <ul class="quest-list" id="weekly-quests">
         <% if (typeof weeklyQuests !== 'undefined' && weeklyQuests.length > 0) { %>
@@ -112,7 +112,7 @@
     <!-- 루틴 빠른 시작 -->
     <div class="card">
       <div class="card-header">
-        <h3>⚡ 루틴 빠른 시작</h3>
+        <h3>루틴 빠른 시작</h3>
         <a href="/routine" class="ghost" style="font-size: 12px;">루틴 관리</a>
       </div>
       <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
@@ -120,7 +120,7 @@
           <div class="pill-list" id="quick-routines">
             <% routines.forEach(routine => { %>
               <div class="pill" onclick="startRoutine('<%= routine.routine_id %>')">
-                🏋️ <%= routine.name %>
+                <%= routine.name %>
               </div>
             <% }); %>
           </div>
@@ -139,7 +139,7 @@
     <!-- 자율 운동 -->
     <div class="card">
       <div class="card-header">
-        <h3>🎯 자율 운동</h3>
+        <h3>자율 운동</h3>
       </div>
       <p class="muted">원하는 운동 하나를 선택해서 자유롭게 운동하세요</p>
       <div class="chip-grid" id="exercise-chips">
@@ -150,10 +150,10 @@
             </div>
           <% }); %>
         <% } else { %>
-          <div class="chip" onclick="startFreeWorkout('squat')">🏋️ 스쿼트</div>
-          <div class="chip" onclick="startFreeWorkout('pushup')">💪 푸시업</div>
-          <div class="chip" onclick="startFreeWorkout('lunge')">🦵 런지</div>
-          <div class="chip" onclick="startFreeWorkout('plank')">🧘 플랭크</div>
+          <div class="chip" onclick="startFreeWorkout('squat')">스쿼트</div>
+          <div class="chip" onclick="startFreeWorkout('pushup')">푸시업</div>
+          <div class="chip" onclick="startFreeWorkout('lunge')">런지</div>
+          <div class="chip" onclick="startFreeWorkout('plank')">플랭크</div>
         <% } %>
       </div>
       <a href="/workout/free" class="ghost full" style="margin-top: 8px;">
@@ -167,7 +167,7 @@
     <!-- 출석 스트릭 -->
     <div class="card">
       <div class="card-header">
-        <h3>🌱 운동 출석</h3>
+        <h3>운동 출석</h3>
         <a href="/history" class="ghost" style="font-size: 12px;">더보기</a>
       </div>
       <div class="streak-grid" id="streak-grid">
@@ -187,7 +187,7 @@
     <!-- 티어 정보 -->
     <div class="card">
       <div class="card-header">
-        <h3>🏆 나의 티어</h3>
+        <h3>나의 티어</h3>
       </div>
       <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated && typeof tierInfo !== 'undefined' && tierInfo) { %>
         <div style="display: flex; align-items: center; gap: 16px;">
@@ -197,7 +197,7 @@
             <% if (tierInfo.nextTierName) { %>
               <p class="muted">다음 티어까지 <%= tierInfo.pointsToNext %>점 남음</p>
             <% } else { %>
-              <p class="muted">최고 티어 달성! 🎉</p>
+              <p class="muted">최고 티어 달성!</p>
             <% } %>
             <div class="progress" style="width: 200px; margin-top: 8px;">
               <div class="progress-bar" style="width: <%= tierInfo.progress %>%"></div>
@@ -215,7 +215,7 @@
   <!-- 운동 배우기 섹션 -->
   <div class="card">
     <div class="card-header">
-      <h3>📚 운동 배우기</h3>
+      <h3>운동 배우기</h3>
       <a href="/learn" class="primary">시작하기</a>
     </div>
     <p class="muted">정확한 자세를 배우고 부상 없이 운동하세요. 튜토리얼을 완료하면 보너스 점수를 받을 수 있어요!</p>
@@ -225,10 +225,10 @@
           <span class="pill small"><%= exercise.emoji %> <%= exercise.name %> 기초</span>
         <% }); %>
       <% } else { %>
-        <span class="pill small">🏋️ 스쿼트 기초</span>
-        <span class="pill small">💪 푸시업 기초</span>
-        <span class="pill small">🦵 런지 기초</span>
-        <span class="pill small">🧘 플랭크 기초</span>
+        <span class="pill small">스쿼트 기초</span>
+        <span class="pill small">푸시업 기초</span>
+        <span class="pill small">런지 기초</span>
+        <span class="pill small">플랭크 기초</span>
       <% } %>
     </div>
   </div>

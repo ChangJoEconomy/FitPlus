@@ -290,8 +290,8 @@ const getHomePage = async (req, res, next) => {
                 const condition = q.quest_template?.condition || {};
                 const progress = q.progress || {};
                 
-                // condition에서 target 추출
-                let target = condition.count || condition.minutes || condition.score || condition.days || 1;
+                // condition에서 target 추출 (target 필드를 우선 확인)
+                let target = condition.target || condition.count || condition.minutes || condition.score || condition.days || 1;
                 let currentProgress = progress.current || progress.count || 0;
                 let progressType = q.quest_template?.type; // DO, QUALITY, HABIT
                 
@@ -314,7 +314,8 @@ const getHomePage = async (req, res, next) => {
                 const condition = q.quest_template?.condition || {};
                 const progress = q.progress || {};
                 
-                let target = condition.count || condition.minutes || condition.score || condition.days || 1;
+                // condition에서 target 추출 (target 필드를 우선 확인)
+                let target = condition.target || condition.count || condition.minutes || condition.score || condition.days || 1;
                 let currentProgress = progress.current || progress.count || 0;
                 let progressType = q.quest_template?.type;
                 

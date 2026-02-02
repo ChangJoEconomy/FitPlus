@@ -1,7 +1,7 @@
 <div class="page active">
   <section class="page-header">
     <div>
-      <h1>📊 운동 히스토리</h1>
+      <h1>운동 히스토리</h1>
       <p class="muted">지금까지의 운동 기록을 확인하세요</p>
     </div>
   </section>
@@ -10,7 +10,7 @@
   <div class="grid four">
     <!-- 연속 운동 -->
     <div class="card hero stat-card">
-      <div class="stat-icon">🔥</div>
+      <div class="stat-icon">연속</div>
       <div class="stat-content">
         <span class="stat-value"><%= stats.streak %></span>
         <span class="stat-label">일 연속</span>
@@ -19,7 +19,7 @@
 
     <!-- 오늘 운동 -->
     <div class="card stat-card">
-      <div class="stat-icon">📅</div>
+      <div class="stat-icon">오늘</div>
       <div class="stat-content">
         <span class="stat-value"><%= stats.today.count %></span>
         <span class="stat-label">오늘 운동</span>
@@ -29,7 +29,7 @@
 
     <!-- 이번 주 -->
     <div class="card stat-card">
-      <div class="stat-icon">📈</div>
+      <div class="stat-icon">주간</div>
       <div class="stat-content">
         <span class="stat-value"><%= stats.week.days %></span>
         <span class="stat-label">이번 주 운동 일수</span>
@@ -39,7 +39,7 @@
 
     <!-- 총 운동 -->
     <div class="card stat-card">
-      <div class="stat-icon">🏆</div>
+      <div class="stat-icon">총합</div>
       <div class="stat-content">
         <span class="stat-value"><%= stats.total %></span>
         <span class="stat-label">총 운동 횟수</span>
@@ -88,7 +88,7 @@
   <div class="history-list">
     <% if (sessions.length === 0) { %>
       <div class="empty-state">
-        <div class="empty-icon">📭</div>
+        <div class="empty-icon">없음</div>
         <h3>운동 기록이 없습니다</h3>
         <p class="muted">운동을 시작해서 기록을 만들어보세요!</p>
         <div class="empty-actions">
@@ -116,7 +116,7 @@
             </div>
             <div class="history-stats">
               <span class="history-stat">
-                <span class="stat-icon">⏱️</span>
+                <span class="stat-icon">시간</span>
                 <% 
                   const mins = Math.floor((session.duration_sec || 0) / 60);
                   const secs = (session.duration_sec || 0) % 60;
@@ -124,7 +124,7 @@
                 <%= mins %>분 <%= secs %>초
               </span>
               <span class="history-stat">
-                <span class="stat-icon">🔄</span>
+                <span class="stat-icon">반복</span>
                 <%= session.total_reps || 0 %>회
               </span>
             </div>
@@ -614,7 +614,7 @@
       let metricsHtml = '';
       if (session.session_metric_result && session.session_metric_result.length > 0) {
         metricsHtml = `
-          <h4>📈 세부 점수</h4>
+          <h4>세부 점수</h4>
           <div class="metric-list">
             ${session.session_metric_result.map(r => `
               <div class="metric-item">
