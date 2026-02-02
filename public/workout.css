@@ -141,6 +141,10 @@
   font-size: 14px;
 }
 
+.camera-overlay[hidden] {
+  display: none;
+}
+
 .camera-actions {
   display: flex;
   gap: 12px;

@@ -209,6 +209,7 @@
     const startBtn = document.getElementById('startBtn');
     const pauseBtn = document.getElementById('pauseBtn');
     const finishBtn = document.getElementById('finishBtn');
+    const cameraReadyHtml = '<p>✅ 준비 완료</p><p class="muted">전신이 잘 보이도록 위치를 조정하세요</p>';
 
     // AI 엔진 초기화
     async function initAIEngines() {
@@ -268,7 +269,7 @@
           poseCanvas.height = videoElement.videoHeight;
         };
 
-        cameraOverlay.innerHTML = '<p>✅ 준비 완료</p><p class="muted">전신이 잘 보이도록 위치를 조정하세요</p>';
+        cameraOverlay.innerHTML = cameraReadyHtml;
         startBtn.disabled = false;
 
       } catch (error) {
@@ -294,6 +295,15 @@
 
     // 운동 시작
     async function startWorkout() {
+      const prevOverlayHtml = cameraOverlay.innerHTML;
+      const prevOverlayHidden = cameraOverlay.hidden;
+      const prevStartHidden = startBtn.hidden;
+      const prevStartDisabled = startBtn.disabled;
+
+      cameraOverlay.hidden = true;
+      startBtn.hidden = true;
+      startBtn.disabled = true;
+
       try {
         // 세션 생성 API 호출
         const response = await fetch('/api/workout/session', {
@@ -331,6 +341,10 @@
 
       } catch (error) {
         console.error('[Session] 시작 에러:', error);
+        cameraOverlay.hidden = prevOverlayHidden;
+        cameraOverlay.innerHTML = prevOverlayHtml || cameraReadyHtml;
+        startBtn.hidden = prevStartHidden;
+        startBtn.disabled = prevStartDisabled;
         alert('운동 시작에 실패했습니다: ' + error.message);
       }
     }

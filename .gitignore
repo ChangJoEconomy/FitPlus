@@ -117,3 +117,7 @@ public/uploads/
 
 /core
 message.txt
+
+.codex/
+.serena/
+AGENTS.md

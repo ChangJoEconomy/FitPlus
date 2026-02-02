@@ -99,7 +99,7 @@ class ScoringEngine {
         if (left == null && right == null) return null;
         if (left == null) return right;
         if (right == null) return left;
-        return Math.min(left, right);
+        return (left + right) / 2;
       },
       'left_knee_angle': () => angles.leftKnee,
       'right_knee_angle': () => angles.rightKnee,
