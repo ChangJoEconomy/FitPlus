@@ -10,39 +10,35 @@
   <div class="grid four">
     <!-- 연속 운동 -->
     <div class="card hero stat-card">
-      <div class="stat-icon">연속</div>
       <div class="stat-content">
         <span class="stat-value"><%= stats.streak %></span>
-        <span class="stat-label">일</span>
+        <span class="stat-label">일 연속</span>
       </div>
     </div>
 
     <!-- 오늘 운동 -->
     <div class="card stat-card">
-      <div class="stat-icon">오늘</div>
       <div class="stat-content">
         <span class="stat-value"><%= stats.today.count %></span>
-        <span class="stat-label">회</span>
+        <span class="stat-label">회 오늘</span>
       </div>
       <div class="stat-sub"><%= stats.today.totalMinutes %>분 / 평균 <%= stats.today.avgScore %>점</div>
     </div>
 
     <!-- 이번 주 -->
     <div class="card stat-card">
-      <div class="stat-icon">주간</div>
       <div class="stat-content">
         <span class="stat-value"><%= stats.week.days %></span>
-        <span class="stat-label">일</span>
+        <span class="stat-label">일 주간</span>
       </div>
       <div class="stat-sub"><%= stats.week.count %>회 / <%= stats.week.totalMinutes %>분</div>
     </div>
 
     <!-- 총 운동 -->
     <div class="card stat-card">
-      <div class="stat-icon">총합</div>
       <div class="stat-content">
         <span class="stat-value"><%= stats.total %></span>
-        <span class="stat-label">회</span>
+        <span class="stat-label">회 총합</span>
       </div>
       <% if (stats.best) { %>
         <div class="stat-sub">최고 <%= stats.best.final_score %>점 (<%= stats.best.exercise?.name %>)</div>
@@ -100,8 +96,7 @@
       <% sessions.forEach(session => { %>
         <div class="history-item" data-session-id="<%= session.session_id %>">
           <div class="history-date">
-            <span class="date-day"><%= new Date(session.started_at).getDate() %></span>
-            <span class="date-month"><%= new Date(session.started_at).getMonth() + 1 %>월</span>
+            <span class="date-full"><%= new Date(session.started_at).getMonth() + 1 %>월 <%= new Date(session.started_at).getDate() %>일</span>
             <span class="date-time">
               <%= new Date(session.started_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) %>
             </span>
@@ -116,7 +111,6 @@
             </div>
             <div class="history-stats">
               <span class="history-stat">
-                <span class="stat-icon">시간</span>
                 <% 
                   const mins = Math.floor((session.duration_sec || 0) / 60);
                   const secs = (session.duration_sec || 0) % 60;
@@ -124,7 +118,6 @@
                 <%= mins %>분 <%= secs %>초
               </span>
               <span class="history-stat">
-                <span class="stat-icon">반복</span>
                 <%= session.total_reps || 0 %>회
               </span>
             </div>
@@ -202,11 +195,6 @@
 
   .stat-card.hero {
     color: white;
-  }
-
-  .stat-icon {
-    font-size: 28px;
-    margin-bottom: 8px;
   }
 
   .stat-content {
@@ -302,15 +290,10 @@
     text-align: center;
   }
 
-  .date-day {
-    font-size: 28px;
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .date-month {
-    font-size: 13px;
-    color: var(--muted);
+  .date-full {
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
   }
 
   .date-time {
