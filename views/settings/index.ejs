@@ -1,0 +1,287 @@
+<div class="page active">
+  <section class="page-header">
+    <div>
+      <h1>⚙️ 설정</h1>
+      <p class="muted">계정 및 앱 설정을 관리하세요</p>
+    </div>
+  </section>
+
+  <div class="grid two">
+    <!-- 프로필 설정 -->
+    <div class="card">
+      <div class="card-header">
+        <h3>👤 프로필 정보</h3>
+      </div>
+      
+      <div class="settings-section">
+        <div class="settings-item">
+          <div class="settings-label">
+            <span class="label-text">아이디</span>
+            <span class="label-value"><%= userInfo.login_id %></span>
+          </div>
+          <span class="muted">아이디는 변경할 수 없습니다</span>
+        </div>
+      </div>
+
+      <form id="nickname-form" class="settings-form">
+        <div class="input-group">
+          <label for="nickname">닉네임</label>
+          <div class="inline-input-row">
+            <input 
+              type="text" 
+              id="nickname" 
+              name="nickname" 
+              value="<%= userInfo.nickname %>"
+              minlength="2"
+              maxlength="32"
+              required
+            />
+            <button type="submit" class="primary check-button">변경</button>
+          </div>
+          <div class="field-message" id="nickname-message"></div>
+        </div>
+      </form>
+    </div>
+
+    <!-- 테마 설정 -->
+    <div class="card">
+      <div class="card-header">
+        <h3>🎨 테마 설정</h3>
+      </div>
+      
+      <div class="theme-options">
+        <label class="theme-option">
+          <input 
+            type="radio" 
+            name="theme" 
+            value="light" 
+            <%= settings.theme === 'light' ? 'checked' : '' %>
+          />
+          <div class="theme-preview light-preview">
+            <div class="preview-header"></div>
+            <div class="preview-content">
+              <div class="preview-card"></div>
+              <div class="preview-card"></div>
+            </div>
+          </div>
+          <span class="theme-name">☀️ 라이트</span>
+        </label>
+        
+        <label class="theme-option">
+          <input 
+            type="radio" 
+            name="theme" 
+            value="dark" 
+            <%= settings.theme === 'dark' ? 'checked' : '' %>
+          />
+          <div class="theme-preview dark-preview">
+            <div class="preview-header"></div>
+            <div class="preview-content">
+              <div class="preview-card"></div>
+              <div class="preview-card"></div>
+            </div>
+          </div>
+          <span class="theme-name">🌙 다크</span>
+        </label>
+        
+        <label class="theme-option">
+          <input 
+            type="radio" 
+            name="theme" 
+            value="system" 
+            <%= settings.theme === 'system' ? 'checked' : '' %>
+          />
+          <div class="theme-preview system-preview">
+            <div class="preview-split">
+              <div class="split-light">
+                <div class="preview-header"></div>
+              </div>
+              <div class="split-dark">
+                <div class="preview-header"></div>
+              </div>
+            </div>
+          </div>
+          <span class="theme-name">💻 시스템</span>
+        </label>
+      </div>
+      
+      <div class="field-message" id="theme-message"></div>
+    </div>
+
+    <!-- 비밀번호 변경 -->
+    <div class="card">
+      <div class="card-header">
+        <h3>🔒 비밀번호 변경</h3>
+      </div>
+      
+      <form id="password-form" class="settings-form">
+        <div class="input-group">
+          <label for="currentPassword">현재 비밀번호</label>
+          <input 
+            type="password" 
+            id="currentPassword" 
+            name="currentPassword" 
+            placeholder="현재 비밀번호 입력"
+            required
+          />
+        </div>
+        
+        <div class="input-group">
+          <label for="newPassword">새 비밀번호</label>
+          <input 
+            type="password" 
+            id="newPassword" 
+            name="newPassword" 
+            placeholder="8자 이상 입력"
+            minlength="8"
+            required
+          />
+        </div>
+        
+        <div class="input-group">
+          <label for="confirmPassword">새 비밀번호 확인</label>
+          <input 
+            type="password" 
+            id="confirmPassword" 
+            name="confirmPassword" 
+            placeholder="새 비밀번호 다시 입력"
+            required
+          />
+        </div>
+        
+        <div class="field-message" id="password-message"></div>
+        
+        <button type="submit" class="primary">비밀번호 변경</button>
+      </form>
+    </div>
+
+    <!-- 계정 정보 -->
+    <div class="card">
+      <div class="card-header">
+        <h3>ℹ️ 계정 정보</h3>
+      </div>
+      
+      <div class="settings-section">
+        <div class="settings-item">
+          <div class="settings-label">
+            <span class="label-text">앱 버전</span>
+            <span class="label-value">1.0.0</span>
+          </div>
+        </div>
+        
+        <div class="settings-item">
+          <div class="settings-label">
+            <span class="label-text">문의하기</span>
+            <a href="mailto:support@fitplus.com" class="label-value link">support@fitplus.com</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // 닉네임 변경
+  const nicknameForm = document.getElementById('nickname-form');
+  const nicknameMessage = document.getElementById('nickname-message');
+  
+  nicknameForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nickname = document.getElementById('nickname').value.trim();
+    
+    try {
+      const res = await fetch('/settings/nickname', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        nicknameMessage.innerHTML = '<span class="success">' + data.message + '</span>';
+        // 헤더의 닉네임도 업데이트
+        const nameEl = document.querySelector('.profile-area .name');
+        if (nameEl) nameEl.textContent = nickname;
+      } else {
+        nicknameMessage.innerHTML = '<span class="error">' + data.message + '</span>';
+      }
+    } catch (err) {
+      nicknameMessage.innerHTML = '<span class="error">오류가 발생했습니다.</span>';
+    }
+  });
+  
+  // 테마 변경
+  const themeOptions = document.querySelectorAll('input[name="theme"]');
+  const themeMessage = document.getElementById('theme-message');
+  
+  themeOptions.forEach(option => {
+    option.addEventListener('change', async (e) => {
+      const theme = e.target.value;
+      
+      try {
+        const res = await fetch('/settings/theme', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ theme })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          themeMessage.innerHTML = '<span class="success">' + data.message + '</span>';
+          applyTheme(theme);
+        } else {
+          themeMessage.innerHTML = '<span class="error">' + data.message + '</span>';
+        }
+      } catch (err) {
+        themeMessage.innerHTML = '<span class="error">오류가 발생했습니다.</span>';
+      }
+    });
+  });
+  
+  // 비밀번호 변경
+  const passwordForm = document.getElementById('password-form');
+  const passwordMessage = document.getElementById('password-message');
+  
+  passwordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    try {
+      const res = await fetch('/settings/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        passwordMessage.innerHTML = '<span class="success">' + data.message + '</span>';
+        passwordForm.reset();
+      } else {
+        passwordMessage.innerHTML = '<span class="error">' + data.message + '</span>';
+      }
+    } catch (err) {
+      passwordMessage.innerHTML = '<span class="error">오류가 발생했습니다.</span>';
+    }
+  });
+});
+
+// 테마 적용 함수
+function applyTheme(theme) {
+  const html = document.documentElement;
+  
+  if (theme === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    html.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  } else {
+    html.setAttribute('data-theme', theme);
+  }
+}
+</script>

@@ -1,5 +1,6 @@
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
+const { supabase } = require('../config/db');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -18,7 +19,7 @@ const generateToken = (user) => {
 };
 
 // UI 표시용 인증 상태 설정 (보안 검증용 아님)
-const addAuthState = (req, res, next) => {
+const addAuthState = async (req, res, next) => {
     const token = req.cookies.token;
     if (token) {
         try {
@@ -29,14 +30,25 @@ const addAuthState = (req, res, next) => {
                 login_id: decoded.login_id,
                 nickname: decoded.nickname
             };
+            
+            // 사용자 테마 설정 가져오기
+            const { data: settings } = await supabase
+                .from('user_settings')
+                .select('theme')
+                .eq('user_id', decoded.user_id)
+                .single();
+            
+            res.locals.userTheme = settings?.theme || 'system';
         } catch (error) {
             res.locals.isAuthenticated = false;
             res.locals.user = null;
+            res.locals.userTheme = 'system';
             res.clearCookie('token'); // 유효하지 않은 토큰 제거
         }
     } else {
         res.locals.isAuthenticated = false;
         res.locals.user = null;
+        res.locals.userTheme = 'system';
     }
     next();
 };

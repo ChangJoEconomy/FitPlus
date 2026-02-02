@@ -5,6 +5,7 @@ const { requireGuest, requireAuth, handleLogout } = require('../middleware/auth'
 const { getQuestPage, completeQuest, claimQuestReward, assignDailyQuests, assignWeeklyQuests } = require('../controllers/quest');
 const { getHistoryPage, getSessionDetail, getHistoryStats, deleteSession } = require('../controllers/history');
 const { getHomePage } = require('../controllers/home');
+const { getSettingsPage, updateNickname, updatePassword, updateTheme, getUserSettings } = require('../controllers/settings');
 const router = express.Router();
 
 // admin 계정은 일반 페이지로 들어가지 않게 막기
@@ -54,5 +55,14 @@ router.get('/history', requireAuth, getHistoryPage);
 router.get('/api/history/stats', requireAuth, getHistoryStats);
 router.get('/api/history/:sessionId', requireAuth, getSessionDetail);
 router.delete('/api/history/:sessionId', requireAuth, deleteSession);
+
+// 설정 페이지 (로그인 필요)
+router.get('/settings', requireAuth, getSettingsPage);
+
+// 설정 API
+router.post('/settings/nickname', requireAuth, updateNickname);
+router.post('/settings/password', requireAuth, updatePassword);
+router.post('/settings/theme', requireAuth, updateTheme);
+router.get('/api/settings', getUserSettings);
 
 module.exports = router;

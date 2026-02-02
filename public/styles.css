@@ -10,6 +10,33 @@
   --danger: #ff5c6d;
   --border: #e6e8ef;
   --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+  --input-bg: #f8fafc;
+  --tab-bg: #eef1ff;
+  --tab-hover: #e1e6ff;
+  --ghost-bg: #f1f5f9;
+  --ghost-color: #334155;
+  --ghost-hover: #e2e8f0;
+}
+
+/* 다크 테마 */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1219;
+  --card: #1a1f2e;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --primary: #6b7cff;
+  --primary-dark: #5b6cff;
+  --accent: #00d4b8;
+  --danger: #ff6b7a;
+  --border: #2d3548;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  --input-bg: #232938;
+  --tab-bg: #232938;
+  --tab-hover: #2d3548;
+  --ghost-bg: #232938;
+  --ghost-color: #cbd5e1;
+  --ghost-hover: #2d3548;
 }
 
 * {
@@ -76,8 +103,8 @@ body {
 
 .tab {
   border: 1px solid transparent;
-  background: #eef1ff;
-  color: #334155;
+  background: var(--tab-bg);
+  color: var(--ghost-color);
   padding: 8px 14px;
   border-radius: 999px;
   font-size: 13px;
@@ -86,7 +113,7 @@ body {
 }
 
 .tab:hover {
-  background: #e1e6ff;
+  background: var(--tab-hover);
 }
 
 .tab.active {
@@ -127,12 +154,12 @@ body {
 }
 
 .logout-btn {
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--ghost-bg);
+  color: var(--muted);
 }
 
 .logout-btn:hover {
-  background: #e2e8f0;
+  background: var(--ghost-hover);
   text-decoration: none;
 }
 
@@ -275,12 +302,12 @@ body {
 }
 
 .ghost {
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--ghost-bg);
+  color: var(--ghost-color);
 }
 
 .ghost:hover {
-  background: #e2e8f0;
+  background: var(--ghost-hover);
 }
 
 .danger {
@@ -301,7 +328,7 @@ body {
 
 .pill {
   border: 1px solid var(--border);
-  background: #f8fafc;
+  background: var(--ghost-bg);
   padding: 8px 14px;
   border-radius: 999px;
   font-size: 13px;
@@ -309,8 +336,8 @@ body {
 }
 
 .pill.small {
-  background: #eef2ff;
-  border-color: #c7d2fe;
+  background: var(--tab-bg);
+  border-color: var(--border);
 }
 
 .card-note {
@@ -336,7 +363,7 @@ body {
 .progress {
   height: 8px;
   border-radius: 999px;
-  background: #e5e7eb;
+  background: var(--border);
   overflow: hidden;
 }
 
@@ -720,7 +747,8 @@ body {
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: #f8fafc;
+  background: var(--input-bg);
+  color: var(--text);
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -764,8 +792,8 @@ body {
   border-radius: 12px;
   padding: 10px 16px;
   border: 1px solid var(--border);
-  background: #f8fafc;
-  color: #334155;
+  background: var(--input-bg);
+  color: var(--ghost-color);
   text-align: center;
   transition: 0.2s ease;
   display: inline-flex;
@@ -774,7 +802,7 @@ body {
 }
 
 .link-button:hover {
-  background: #e2e8f0;
+  background: var(--ghost-hover);
   text-decoration: none;
 }
 
@@ -801,5 +829,218 @@ body {
 
   .tabs {
     overflow-x: auto;
+  }
+}
+
+/* ========== 다크 테마 추가 스타일 ========== */
+[data-theme="dark"] .chip {
+  background: var(--tab-bg);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .form-group input {
+  background: var(--input-bg);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+[data-theme="dark"] .modal-content {
+  background: var(--card);
+}
+
+[data-theme="dark"] .form-success {
+  background: rgba(0, 212, 184, 0.15);
+  color: var(--accent);
+}
+
+/* ========== 설정 페이지 스타일 ========== */
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-item:last-child {
+  border-bottom: none;
+}
+
+.settings-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.label-text {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.label-value {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.label-value.link {
+  color: var(--primary);
+}
+
+/* 테마 선택 옵션 */
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.theme-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.theme-option input[type="radio"] {
+  display: none;
+}
+
+.theme-preview {
+  width: 100%;
+  aspect-ratio: 16/10;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-option input[type="radio"]:checked + .theme-preview {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(91, 108, 255, 0.2);
+}
+
+.light-preview {
+  background: #f6f7fb;
+}
+
+.light-preview .preview-header {
+  height: 20%;
+  background: #ffffff;
+  border-bottom: 1px solid #e6e8ef;
+}
+
+.light-preview .preview-content {
+  padding: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.light-preview .preview-card {
+  flex: 1;
+  height: 24px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #e6e8ef;
+}
+
+.dark-preview {
+  background: #0f1219;
+}
+
+.dark-preview .preview-header {
+  height: 20%;
+  background: #1a1f2e;
+  border-bottom: 1px solid #2d3548;
+}
+
+.dark-preview .preview-content {
+  padding: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.dark-preview .preview-card {
+  flex: 1;
+  height: 24px;
+  background: #1a1f2e;
+  border-radius: 6px;
+  border: 1px solid #2d3548;
+}
+
+.system-preview {
+  display: flex;
+  overflow: hidden;
+}
+
+.preview-split {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.split-light {
+  flex: 1;
+  background: #f6f7fb;
+}
+
+.split-light .preview-header {
+  height: 100%;
+  background: #ffffff;
+  border-right: 1px solid #e6e8ef;
+}
+
+.split-dark {
+  flex: 1;
+  background: #0f1219;
+}
+
+.split-dark .preview-header {
+  height: 100%;
+  background: #1a1f2e;
+}
+
+.theme-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.theme-option input[type="radio"]:checked ~ .theme-name {
+  color: var(--primary);
+}
+
+/* 성공 메시지 스타일 */
+.form-success {
+  background: rgba(0, 194, 168, 0.1);
+  color: #00a88e;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.field-message .success {
+  color: #16a34a;
+}
+
+[data-theme="dark"] .field-message .success {
+  color: #4ade80;
+}
+
+@media (max-width: 600px) {
+  .theme-options {
+    grid-template-columns: 1fr;
   }
 }

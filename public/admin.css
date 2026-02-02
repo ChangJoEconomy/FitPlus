@@ -484,3 +484,49 @@
 .toggle input:checked + .toggle-slider:before {
   transform: translateX(20px);
 }
+
+/* ========== Admin 다크 테마 ========== */
+[data-theme="dark"] .admin-app {
+  background: #0f1219;
+}
+
+[data-theme="dark"] .admin-sidebar {
+  background: #1a1f2e;
+  border-right-color: #2d3548;
+}
+
+[data-theme="dark"] .sidebar-link {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .sidebar-link:hover {
+  background: #232938;
+}
+
+[data-theme="dark"] .sidebar-link.active {
+  background: rgba(91, 108, 255, 0.15);
+}
+
+[data-theme="dark"] .admin-table {
+  background: #1a1f2e;
+  border-color: #2d3548;
+}
+
+[data-theme="dark"] .admin-table thead th {
+  background: #232938;
+  border-color: #2d3548;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .admin-table tbody td {
+  border-color: #2d3548;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .admin-table tbody tr:hover {
+  background: #232938;
+}
+
+[data-theme="dark"] .toggle-slider {
+  background-color: #4b5563;
+}
