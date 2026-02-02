@@ -146,14 +146,11 @@
         <% if (typeof exercises !== 'undefined' && exercises.length > 0) { %>
           <% exercises.forEach(exercise => { %>
             <div class="chip" onclick="startFreeWorkout('<%= exercise.code.toLowerCase() %>')">
-              <%= exercise.emoji %> <%= exercise.name %>
+              <%= exercise.name %>
             </div>
           <% }); %>
         <% } else { %>
-          <div class="chip" onclick="startFreeWorkout('squat')">스쿼트</div>
-          <div class="chip" onclick="startFreeWorkout('pushup')">푸시업</div>
-          <div class="chip" onclick="startFreeWorkout('lunge')">런지</div>
-          <div class="chip" onclick="startFreeWorkout('plank')">플랭크</div>
+          <p class="muted">로그인이 필요합니다</p>
         <% } %>
       </div>
       <a href="/workout/free" class="ghost full" style="margin-top: 8px;">
@@ -222,13 +219,10 @@
     <div class="pill-list">
       <% if (typeof exercises !== 'undefined' && exercises.length > 0) { %>
         <% exercises.forEach(exercise => { %>
-          <span class="pill small"><%= exercise.emoji %> <%= exercise.name %> 기초</span>
+          <span class="pill small"><%= exercise.name %> 기초</span>
         <% }); %>
       <% } else { %>
-        <span class="pill small">스쿼트 기초</span>
-        <span class="pill small">푸시업 기초</span>
-        <span class="pill small">런지 기초</span>
-        <span class="pill small">플랭크 기초</span>
+        <p class="muted">운동 정보를 불러올 수 없습니다</p>
       <% } %>
     </div>
   </div>
