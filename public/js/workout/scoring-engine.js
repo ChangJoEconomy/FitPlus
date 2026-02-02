@@ -90,6 +90,20 @@ class ScoringEngine {
   getMetricValue(angles, metricKey) {
     if (!angles) return null;
 
+    const combineAngles = (left, right, options = {}) => {
+      const l = Number.isFinite(left) ? left : null;
+      const r = Number.isFinite(right) ? right : null;
+      if (l == null && r == null) return null;
+      if (l == null) return r;
+      if (r == null) return l;
+
+      const diff = Math.abs(l - r);
+      if (diff > (options.maxDiff ?? 35)) {
+        return options.preferHighOnMismatch ? Math.max(l, r) : (l + r) / 2;
+      }
+      return (l + r) / 2;
+    };
+
     // metric.key와 angles 프로퍼티 매핑
     const keyMapping = {
       // 무릎 관련
@@ -132,10 +146,7 @@ class ScoringEngine {
       'elbow_angle': () => {
         const left = angles.leftElbow;
         const right = angles.rightElbow;
-        if (left == null && right == null) return null;
-        if (left == null) return right;
-        if (right == null) return left;
-        return Math.min(left, right);
+        return combineAngles(left, right, { preferHighOnMismatch: true });
       },
       'left_elbow_angle': () => angles.leftElbow,
       'right_elbow_angle': () => angles.rightElbow,

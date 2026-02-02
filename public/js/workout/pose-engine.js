@@ -190,14 +190,30 @@ class PoseEngine {
       return null;
     };
 
-    // 측면: 2D가 더 안정적인 경우가 많고(특히 스쿼트/푸쉬업 굽힘각),
-    // 정면: 굽힘이 화면 밖(z축)으로 빠져 2D가 둔감해져서 3D를 우선 사용
-    const angleFlexion = (idx1, idx2, idx3) => {
+    const normalizeAngle = (value) => {
+      if (!Number.isFinite(value)) return null;
+      return Math.max(0, Math.min(180, value));
+    };
+
+    const pickAngle = (a2, a3, options = {}) => {
+      if (!canUseWorld) return normalizeAngle(a2);
+
+      const v2 = normalizeAngle(a2);
+      const v3 = normalizeAngle(a3);
+
+      if (options.prefer3D) return v3 != null ? v3 : v2;
+      if (options.prefer2D) return v2 != null ? v2 : v3;
+
+      // 측면: 2D가 더 안정적인 경우가 많고(특히 스쿼트/푸쉬업 굽힘각),
+      // 정면: 굽힘이 화면 밖(z축)으로 빠져 2D가 둔감해져서 3D를 우선 사용
+      if (prefer2DForFlexion) return v2 != null ? v2 : v3;
+      return v3 != null ? v3 : v2;
+    };
+
+    const angleFlexion = (idx1, idx2, idx3, options = {}) => {
       const a2 = angle2D(idx1, idx2, idx3);
       const a3 = angle3D(idx1, idx2, idx3);
-      if (!canUseWorld) return a2;
-      if (prefer2DForFlexion) return a2 ?? a3;
-      return a3 ?? a2;
+      return pickAngle(a2, a3, options);
     };
 
     return {
@@ -206,8 +222,8 @@ class PoseEngine {
       rightKnee: angleFlexion(LANDMARKS.RIGHT_HIP, LANDMARKS.RIGHT_KNEE, LANDMARKS.RIGHT_ANKLE),
 
       // 팔꿈치 각도 (팔 폈을 때 ~180도, 굽힐 때 ~45도)
-      leftElbow: angleFlexion(LANDMARKS.LEFT_SHOULDER, LANDMARKS.LEFT_ELBOW, LANDMARKS.LEFT_WRIST),
-      rightElbow: angleFlexion(LANDMARKS.RIGHT_SHOULDER, LANDMARKS.RIGHT_ELBOW, LANDMARKS.RIGHT_WRIST),
+      leftElbow: angleFlexion(LANDMARKS.LEFT_SHOULDER, LANDMARKS.LEFT_ELBOW, LANDMARKS.LEFT_WRIST, { prefer3D: true }),
+      rightElbow: angleFlexion(LANDMARKS.RIGHT_SHOULDER, LANDMARKS.RIGHT_ELBOW, LANDMARKS.RIGHT_WRIST, { prefer3D: true }),
 
       // 엉덩이 각도 (서있을 때 ~180도, 굽힐 때 감소)
       leftHip: angleFlexion(LANDMARKS.LEFT_SHOULDER, LANDMARKS.LEFT_HIP, LANDMARKS.LEFT_KNEE),
@@ -218,7 +234,7 @@ class PoseEngine {
       rightShoulder: angleFlexion(LANDMARKS.RIGHT_HIP, LANDMARKS.RIGHT_SHOULDER, LANDMARKS.RIGHT_ELBOW),
 
       // 척추 각도 (상체 기울기)
-      spine: this.getSpineAngle(landmarks, (!prefer2DForFlexion && canUseWorld) ? worldLandmarks : null),
+      spine: this.getSpineAngle(landmarks, canUseWorld ? worldLandmarks : null),
 
       // 무릎 정렬 (무릎이 발끝을 넘는지)
       kneeAlignment: this.getKneeAlignment(landmarks),

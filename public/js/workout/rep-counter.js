@@ -390,9 +390,23 @@ class RepCounter {
    * 각도 값 추출
    */
   getAngleValue(angles, key) {
+    const combineAngles = (left, right, options = {}) => {
+      const l = Number.isFinite(left) ? left : null;
+      const r = Number.isFinite(right) ? right : null;
+      if (l == null && r == null) return null;
+      if (l == null) return r;
+      if (r == null) return l;
+
+      const diff = Math.abs(l - r);
+      if (diff > (options.maxDiff ?? 35)) {
+        return options.preferHighOnMismatch ? Math.max(l, r) : (l + r) / 2;
+      }
+      return (l + r) / 2;
+    };
+
     const mapping = {
       'knee_angle': () => Math.min(angles.leftKnee || 180, angles.rightKnee || 180),
-      'elbow_angle': () => Math.min(angles.leftElbow || 180, angles.rightElbow || 180),
+      'elbow_angle': () => combineAngles(angles.leftElbow, angles.rightElbow, { preferHighOnMismatch: true }),
       'hip_angle': () => Math.min(angles.leftHip || 180, angles.rightHip || 180),
       'shoulder_angle': () => Math.max(angles.leftShoulder || 0, angles.rightShoulder || 0),
       'spine_angle': () => angles.spine || 0
