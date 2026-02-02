@@ -87,11 +87,14 @@
 </div>
 
 <style>
-  .form-select {
+  .form-select,
+  .form-group select,
+  .form-group input {
     padding: 10px 12px;
     border-radius: 12px;
     border: 1px solid var(--border);
-    background: #f8fafc;
+    background: var(--input-bg, #f8fafc);
+    color: var(--text);
     width: 100%;
   }
 
@@ -106,7 +109,7 @@
     align-items: center;
     gap: 12px;
     padding: 16px;
-    background: #f8fafc;
+    background: var(--input-bg, #f8fafc);
     border-radius: 12px;
     border: 1px solid var(--border);
   }
@@ -145,11 +148,12 @@
   }
 
   .move-btn {
-    background: #e2e8f0;
+    background: var(--ghost-bg, #e2e8f0);
+    color: var(--text);
   }
 
   .move-btn:hover {
-    background: #cbd5e1;
+    background: var(--border, #cbd5e1);
   }
 
   .remove-btn {

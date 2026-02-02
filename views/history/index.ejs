@@ -13,7 +13,7 @@
       <div class="stat-icon">연속</div>
       <div class="stat-content">
         <span class="stat-value"><%= stats.streak %></span>
-        <span class="stat-label">일 연속</span>
+        <span class="stat-label">일</span>
       </div>
     </div>
 
@@ -22,7 +22,7 @@
       <div class="stat-icon">오늘</div>
       <div class="stat-content">
         <span class="stat-value"><%= stats.today.count %></span>
-        <span class="stat-label">오늘 운동</span>
+        <span class="stat-label">회</span>
       </div>
       <div class="stat-sub"><%= stats.today.totalMinutes %>분 / 평균 <%= stats.today.avgScore %>점</div>
     </div>
@@ -32,7 +32,7 @@
       <div class="stat-icon">주간</div>
       <div class="stat-content">
         <span class="stat-value"><%= stats.week.days %></span>
-        <span class="stat-label">이번 주 운동 일수</span>
+        <span class="stat-label">일</span>
       </div>
       <div class="stat-sub"><%= stats.week.count %>회 / <%= stats.week.totalMinutes %>분</div>
     </div>
@@ -42,7 +42,7 @@
       <div class="stat-icon">총합</div>
       <div class="stat-content">
         <span class="stat-value"><%= stats.total %></span>
-        <span class="stat-label">총 운동 횟수</span>
+        <span class="stat-label">회</span>
       </div>
       <% if (stats.best) { %>
         <div class="stat-sub">최고 <%= stats.best.final_score %>점 (<%= stats.best.exercise?.name %>)</div>
@@ -653,7 +653,7 @@
             <div class="value">${startDate.toLocaleString('ko-KR')}</div>
           </div>
         </div>
-        ${session.summary_feedback ? `<p style="background: #f8fafc; padding: 16px; border-radius: 12px; margin-bottom: 24px;">${session.summary_feedback}</p>` : ''}
+        ${session.summary_feedback ? `<p style="background: var(--input-bg, #f8fafc); padding: 16px; border-radius: 12px; margin-bottom: 24px;">${session.summary_feedback}</p>` : ''}
         ${metricsHtml}
       `;
     } catch (error) {
