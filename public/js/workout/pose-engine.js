@@ -40,6 +40,17 @@ const LANDMARKS = {
   RIGHT_FOOT_INDEX: 32
 };
 
+const FEEDBACK_COLORS = {
+  good: '#22c55e',
+  warn: '#f59e0b',
+  bad: '#ef4444'
+};
+
+const FEEDBACK_THRESHOLDS = {
+  good: 0.8,
+  warn: 0.6
+};
+
 class PoseEngine {
   constructor(options = {}) {
     this.pose = null;
@@ -55,6 +66,8 @@ class PoseEngine {
     this.useOneEuroFilter = options.useOneEuroFilter ?? true;
     this.landmarkSmoother = null;
     this.worldLandmarkSmoother = null;
+
+    this.visualFeedback = null;
 
     // 카메라 뷰(정면/측면) 추정 히스토리 (각도 계산 소스 선택용)
     this.viewHistory = [];
@@ -403,6 +416,207 @@ class PoseEngine {
   }
 
   /**
+   * 점수 breakdown 기반 시각 피드백 업데이트
+   * @param {Array} breakdown - ScoringEngine breakdown
+   */
+  setVisualFeedback(breakdown) {
+    if (!Array.isArray(breakdown) || breakdown.length === 0) {
+      this.visualFeedback = null;
+      return;
+    }
+
+    const map = { landmarks: {}, connections: {} };
+
+    for (const item of breakdown) {
+      if (!item || !item.key) continue;
+      const severity = this.getSeverityFromScore(item.score, item.maxScore);
+      if (severity == null || severity === 0) continue;
+
+      const mapping = this.getVisualMappingForMetric(item.key);
+      if (!mapping) continue;
+
+      if (Array.isArray(mapping.landmarks)) {
+        for (const idx of mapping.landmarks) {
+          const prev = map.landmarks[idx] || 0;
+          map.landmarks[idx] = Math.max(prev, severity);
+        }
+      }
+
+      if (Array.isArray(mapping.connections)) {
+        for (const [start, end] of mapping.connections) {
+          const key = this.getConnectionKey(start, end);
+          const prev = map.connections[key] || 0;
+          map.connections[key] = Math.max(prev, severity);
+        }
+      }
+    }
+
+    const hasFeedback = Object.keys(map.landmarks).length > 0 || Object.keys(map.connections).length > 0;
+    this.visualFeedback = hasFeedback ? map : null;
+  }
+
+  getSeverityFromScore(score, maxScore) {
+    if (!Number.isFinite(score) || !Number.isFinite(maxScore) || maxScore <= 0) return null;
+    const ratio = score / maxScore;
+    if (ratio < FEEDBACK_THRESHOLDS.warn) return 2;
+    if (ratio < FEEDBACK_THRESHOLDS.good) return 1;
+    return 0;
+  }
+
+  getColorForSeverity(severity) {
+    if (severity === 2) return FEEDBACK_COLORS.bad;
+    if (severity === 1) return FEEDBACK_COLORS.warn;
+    return FEEDBACK_COLORS.good;
+  }
+
+  getConnectionKey(start, end) {
+    const a = Math.min(start, end);
+    const b = Math.max(start, end);
+    return `${a}-${b}`;
+  }
+
+  getLandmarkSeverity(index) {
+    const map = this.visualFeedback?.landmarks;
+    if (!map) return 0;
+    return map[index] || 0;
+  }
+
+  getConnectionSeverity(start, end) {
+    const map = this.visualFeedback?.connections;
+    if (!map) return 0;
+    const key = this.getConnectionKey(start, end);
+    return map[key] || 0;
+  }
+
+  getVisualMappingForMetric(metricKey) {
+    const key = (metricKey || '').toString().toLowerCase();
+    if (!key) return null;
+
+    if (key.includes('spine') || key.includes('torso') || key.includes('back')) {
+      return this.getSpineVisualMap();
+    }
+
+    const side = key.startsWith('left_') ? 'left' : (key.startsWith('right_') ? 'right' : 'both');
+    const base = key.replace(/^left_|^right_/, '');
+
+    if (base.includes('elbow')) return this.getElbowVisualMap(side);
+    if (base.includes('shoulder')) return this.getShoulderVisualMap(side);
+    if (base.includes('hip')) return this.getHipVisualMap(side);
+    if (base.includes('knee') || base === 'depth') return this.getKneeVisualMap(side);
+
+    return null;
+  }
+
+  getSpineVisualMap() {
+    return {
+      landmarks: [
+        LANDMARKS.LEFT_SHOULDER,
+        LANDMARKS.RIGHT_SHOULDER,
+        LANDMARKS.LEFT_HIP,
+        LANDMARKS.RIGHT_HIP
+      ],
+      connections: [
+        [LANDMARKS.LEFT_SHOULDER, LANDMARKS.LEFT_HIP],
+        [LANDMARKS.RIGHT_SHOULDER, LANDMARKS.RIGHT_HIP],
+        [LANDMARKS.LEFT_SHOULDER, LANDMARKS.RIGHT_SHOULDER],
+        [LANDMARKS.LEFT_HIP, LANDMARKS.RIGHT_HIP]
+      ]
+    };
+  }
+
+  getElbowVisualMap(side) {
+    const left = {
+      landmarks: [LANDMARKS.LEFT_ELBOW],
+      connections: [
+        [LANDMARKS.LEFT_SHOULDER, LANDMARKS.LEFT_ELBOW],
+        [LANDMARKS.LEFT_ELBOW, LANDMARKS.LEFT_WRIST]
+      ]
+    };
+    const right = {
+      landmarks: [LANDMARKS.RIGHT_ELBOW],
+      connections: [
+        [LANDMARKS.RIGHT_SHOULDER, LANDMARKS.RIGHT_ELBOW],
+        [LANDMARKS.RIGHT_ELBOW, LANDMARKS.RIGHT_WRIST]
+      ]
+    };
+    if (side === 'left') return left;
+    if (side === 'right') return right;
+    return {
+      landmarks: left.landmarks.concat(right.landmarks),
+      connections: left.connections.concat(right.connections)
+    };
+  }
+
+  getShoulderVisualMap(side) {
+    const left = {
+      landmarks: [LANDMARKS.LEFT_SHOULDER],
+      connections: [
+        [LANDMARKS.LEFT_HIP, LANDMARKS.LEFT_SHOULDER],
+        [LANDMARKS.LEFT_SHOULDER, LANDMARKS.LEFT_ELBOW]
+      ]
+    };
+    const right = {
+      landmarks: [LANDMARKS.RIGHT_SHOULDER],
+      connections: [
+        [LANDMARKS.RIGHT_HIP, LANDMARKS.RIGHT_SHOULDER],
+        [LANDMARKS.RIGHT_SHOULDER, LANDMARKS.RIGHT_ELBOW]
+      ]
+    };
+    if (side === 'left') return left;
+    if (side === 'right') return right;
+    return {
+      landmarks: left.landmarks.concat(right.landmarks),
+      connections: left.connections.concat(right.connections)
+    };
+  }
+
+  getHipVisualMap(side) {
+    const left = {
+      landmarks: [LANDMARKS.LEFT_HIP],
+      connections: [
+        [LANDMARKS.LEFT_SHOULDER, LANDMARKS.LEFT_HIP],
+        [LANDMARKS.LEFT_HIP, LANDMARKS.LEFT_KNEE]
+      ]
+    };
+    const right = {
+      landmarks: [LANDMARKS.RIGHT_HIP],
+      connections: [
+        [LANDMARKS.RIGHT_SHOULDER, LANDMARKS.RIGHT_HIP],
+        [LANDMARKS.RIGHT_HIP, LANDMARKS.RIGHT_KNEE]
+      ]
+    };
+    if (side === 'left') return left;
+    if (side === 'right') return right;
+    return {
+      landmarks: left.landmarks.concat(right.landmarks),
+      connections: left.connections.concat(right.connections)
+    };
+  }
+
+  getKneeVisualMap(side) {
+    const left = {
+      landmarks: [LANDMARKS.LEFT_KNEE],
+      connections: [
+        [LANDMARKS.LEFT_HIP, LANDMARKS.LEFT_KNEE],
+        [LANDMARKS.LEFT_KNEE, LANDMARKS.LEFT_ANKLE]
+      ]
+    };
+    const right = {
+      landmarks: [LANDMARKS.RIGHT_KNEE],
+      connections: [
+        [LANDMARKS.RIGHT_HIP, LANDMARKS.RIGHT_KNEE],
+        [LANDMARKS.RIGHT_KNEE, LANDMARKS.RIGHT_ANKLE]
+      ]
+    };
+    if (side === 'left') return left;
+    if (side === 'right') return right;
+    return {
+      landmarks: left.landmarks.concat(right.landmarks),
+      connections: left.connections.concat(right.connections)
+    };
+  }
+
+  /**
    * 캔버스에 포즈 그리기
    */
   drawPose(canvas, results) {
@@ -445,7 +659,6 @@ class PoseEngine {
       [LANDMARKS.RIGHT_KNEE, LANDMARKS.RIGHT_ANKLE]
     ];
 
-    ctx.strokeStyle = '#5b6cff';
     ctx.lineWidth = 3;
 
     connections.forEach(([start, end]) => {
@@ -453,6 +666,8 @@ class PoseEngine {
       const p2 = landmarks[end];
 
       if (p1.visibility > 0.5 && p2.visibility > 0.5) {
+        const severity = this.getConnectionSeverity(start, end);
+        ctx.strokeStyle = this.getColorForSeverity(severity);
         ctx.beginPath();
         ctx.moveTo(p1.x * width, p1.y * height);
         ctx.lineTo(p2.x * width, p2.y * height);
@@ -469,7 +684,8 @@ class PoseEngine {
       if (landmark.visibility > 0.5) {
         ctx.beginPath();
         ctx.arc(landmark.x * width, landmark.y * height, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = '#7c54ff';
+        const severity = this.getLandmarkSeverity(index);
+        ctx.fillStyle = this.getColorForSeverity(severity);
         ctx.fill();
       }
     });

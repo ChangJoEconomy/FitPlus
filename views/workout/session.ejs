@@ -388,6 +388,10 @@ cameraOverlay.innerHTML = cameraReadyHtml;
       // 1. 점수 계산
       const scoreResult = scoringEngine.calculate(angles);
 
+      if (poseEngine && poseEngine.setVisualFeedback) {
+        poseEngine.setVisualFeedback(scoreResult.breakdown);
+      }
+
       // 디버깅: 점수 결과
       if (scoreResult.score > 0) {
         console.log('[Session] 점수:', scoreResult.score, 'breakdown:', scoreResult.breakdown?.length);
